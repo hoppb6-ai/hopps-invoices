@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#FF6600">
+<link rel="manifest" href="manifest.json">
+<title>Hopps Invoices</title>
+<style>
+:root {
+  --orange: #FF6600;
+  --cream: #FFF8F0;
+  --olive: #6B8E23;
+  --charcoal: #333;
+  --light: #F5F0E8;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--cream);
+  color: var(--charcoal);
+  min-height: 100vh;
+}
+.screen { display: none; padding: 16px; max-width: 480px; margin: 0 auto; }
+.screen.active { display: block; }
+h1, h2 { margin: 0 0 12px; color: var(--orange); }
+button, .btn {
+  background: var(--orange);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  width: 100%;
+  margin: 6px 0;
+  cursor: pointer;
+}
+button.secondary { background: #555; }
+button.danger { background: #c0392b; }
+input, select, textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  background: white;
+}
+.pin-box { text-align: center; padding-top: 40vh; }
+.pin-box input { font-size: 24px; letter-spacing: 8px; text-align: center; max-width: 200px; }
+.item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+.item-row button { width: auto; padding: 6px 10px; margin: 0; }
+.catalogue-item { background: white; margin: 6px 0; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+.total-bar { background: var(--orange); color: white; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 6px; text-align: right; margin-top: 12px; }
+.green { color: var(--olive); }
+.section { background: white; padding: 12px; border-radius: 8px; margin: 10px 0; }
+canvas { display: none; }
+</style>
+</head>
+<body>
+
+<!-- PIN Screen -->
+<div id="pinScreen" class="screen active">
+  <div class="pin-box">
+    <h1>Hopps Invoices</h1>
+    <input id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="PIN">
+    <button onclick="checkPin()">Unlock</button>
+    <p id="pinError" style="color:red; display:none;">Wrong PIN</p>
+  </div>
+</div>
+
+<!-- Main Menu -->
+<div id="menu" class="screen">
+  <h1 id="bizNameHeader">Hopps Handyman Services</h1>
+  <button onclick="showScreen('newInvoice')">New Invoice</button>
+  <button onclick="showScreen('profile')" class="secondary">Edit Profile</button>
+  <button onclick="lockApp()" class="danger">Lock</button>
+</div>
+
+<!-- Profile -->
+<div id="profile" class="screen">
+  <h2>Business Profile</h2>
+  <label>Business Name</label>
+  <input id="pName" type="text">
+  <label>Tagline</label>
+  <input id="pTagline" type="text">
+  <label>Address</label>
+  <textarea id="pAddress" rows="2"></textarea>
+  <label>Phone</label>
+  <input id="pPhone" type="text">
+  <label>Email</label>
+  <input id="pEmail" type="text">
+  <label>Website</label>
+  <input id="pWeb" type="text">
+  <label>Default Transportation Fee</label>
+  <input id="pTransport" type="number" step="0.01">
+  <label>Default Maintenance Fee</label>
+  <input id="pMaint" type="number" step="0.01">
+  <button onclick="saveProfile()">Save Profile</button>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- New Invoice: Category Select -->
+<div id="newInvoice" class="screen">
+  <h2>Select Work Type</h2>
+  <button onclick="selectCategory('Home Repairs')">Home Repairs</button>
+  <button onclick="selectCategory('Small Engine')">Small Engine</button>
+  <button onclick="selectCategory('Plumbing')">Plumbing</button>
+  <button onclick="selectCategory('Electrical')">Electrical</button>
+  <button onclick="selectCategory('General')">General / Other</button>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Builder -->
+<div id="builder" class="screen">
+  <h2 id="catTitle">Builder</h2>
+  <div id="catalogueList"></div>
+  <div class="section">
+    <h3>Custom Line</h3>
+    <input id="customName" placeholder="Description">
+    <input id="customPrice" type="number" step="0.01" placeholder="Price">
+    <button onclick="addCustom()">Add Custom</button>
+  </div>
+  <div class="section">
+    <h3>Added Items</h3>
+    <div id="addedItems"></div>
+  </div>
+  <label>Transportation Fee</label>
+  <input id="invTransport" type="number" step="0.01">
+  <label>Maintenance Fee</label>
+  <input id="invMaint" type="number" step="0.01">
+  <button onclick="previewInvoice()">Preview Invoice</button>
+  <button onclick="showScreen('newInvoice')" class="secondary">Back</button>
+</div>
+
+<!-- Preview -->
+<div id="previewScreen" class="screen">
+  <h2>Invoice Preview</h2>
+  <div id="invoicePreview" class="section"></div>
+  <button onclick="exportPNG()">Download PNG</button>
+  <button onclick="showScreen('builder')" class="secondary">Back to Edit</button>
+  <button onclick="showScreen('menu')" class="secondary">Done</button>
+</div>
+
+<canvas id="invoiceCanvas" width="800" height="1100"></canvas>
+
+<script>
+const PIN = '5295';
+let profile = {
+  name: 'Hopps Handyman Services',
+  tagline: 'Reliable repairs, done right',
+  address: 'Your Address Here',
+  phone: '(555) 123-4567',
+  email: 'info@hoppshandyman.com',
+  web: 'hoppshandyman.com',
+  transport: 25,
+  maint: 40
+};
+let currentCategory = '';
+let invoiceItems = [];
+let currentInvoice = {};
+
+const catalogue = {
+  'Home Repairs': [
+    { name: 'Toilet repair', price: 150 },
+    { name: 'Faucet repair', price: 80 },
+    { name: 'Door repair / adjust', price: 60 },
+    { name: 'Drywall patch', price: 90 },
+    { name: 'Window repair', price: 70 }
+  ],
+  'Small Engine': [
+    { name: 'Lawn mower spring tune-up', price: 75 },
+    { name: 'Chainsaw service', price: 65 },
+    { name: 'Trimmer / edger repair', price: 55 },
+    { name: 'Generator service', price: 100 },
+    { name: 'Blade sharpening', price: 25 }
+  ],
+  'Plumbing': [
+    { name: 'Toilet repair', price: 150 },
+    { name: 'Drain cleaning', price: 120 },
+    { name: 'Pipe leak repair', price: 140 },
+    { name: 'Faucet replacement', price: 110 }
+  ],
+  'Electrical': [
+    { name: 'Outlet / switch replacement', price: 85 },
+    { name: 'Light fixture install', price: 95 },
+    { name: 'Ceiling fan install', price: 150 },
+    { name: 'GFCI replacement', price: 90 }
+  ],
+  'General': [
+    { name: 'General handyman hour', price: 75 },
+    { name: 'Assembly / installation', price: 60 },
+    { name: 'Seasonal maintenance', price: 100 }
+  ]
+};
+
+function loadProfile() {
+  const saved = localStorage.getItem('hoppsProfile');
+  if (saved) profile = JSON.parse(saved);
+  document.getElementById('bizNameHeader').textContent = profile.name;
+}
+function saveProfile() {
+  profile.name = document.getElementById('pName').value || profile.name;
+  profile.tagline = document.getElementById('pTagline').value;
+  profile.address = document.getElementById('pAddress').value;
+  profile.phone = document.getElementById('pPhone').value;
+  profile.email = document.getElementById('pEmail').value;
+  profile.web = document.getElementById('pWeb').value;
+  profile.transport = parseFloat(document.getElementById('pTransport').value) || 0;
+  profile.maint = parseFloat(document.getElementById('pMaint').value) || 0;
+  localStorage.setItem('hoppsProfile', JSON.stringify(profile));
+  document.getElementById('bizNameHeader').textContent = profile.name;
+  alert('Profile saved');
+  showScreen('menu');
+}
+function fillProfileForm() {
+  document.getElementById('pName').value = profile.name;
+  document.getElementById('pTagline').value = profile.tagline || '';
+  document.getElementById('pAddress').value = profile.address || '';
+  document.getElementById('pPhone').value = profile.phone || '';
+  document.getElementById('pEmail').value = profile.email || '';
+  document.getElementById('pWeb').value = profile.web || '';
+  document.getElementById('pTransport').value = profile.transport || 0;
+  document.getElementById('pMaint').value = profile.maint || 0;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'profile') fillProfileForm();
+  if (id === 'builder') renderCatalogue();
+}
+function checkPin() {
+  const val = document.getElementById('pinInput').value;
+  if (val === PIN) {
+    document.getElementById('pinError').style.display = 'none';
+    loadProfile();
+    showScreen('menu');
+  } else {
+    document.getElementById('pinError').style.display = 'block';
+    document.getElementById('pinInput').value = '';
+  }
+}
+function lockApp() {
+  document.getElementById('pinInput').value = '';
+  showScreen('pinScreen');
+}
+function selectCategory(cat) {
+  currentCategory = cat;
+  invoiceItems = [];
+  document.getElementById('catTitle').textContent = cat;
+  document.getElementById('invTransport').value = profile.transport || 0;
+  document.getElementById('invMaint').value = profile.maint || 0;
+  showScreen('builder');
+}
+function renderCatalogue() {
+  const list = document.getElementById('catalogueList');
+  list.innerHTML = '';
+  const items = catalogue[currentCategory] || [];
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'catalogue-item';
+    div.innerHTML = `<span>${item.name} <small>$${item.price}</small></span><button onclick="addItem('${item.name.replace(/'/g,"\\'")}', ${item.price})">Add</button>`;
+    list.appendChild(div);
+  });
+  renderAdded();
+}
+function addItem(name, price) {
+  invoiceItems.push({ name, price: parseFloat(price), qty: 1 });
+  renderAdded();
+}
+function addCustom() {
+  const name = document.getElementById('customName').value.trim();
+  const price = parseFloat(document.getElementById('customPrice').value);
+  if (!name || isNaN(price)) return;
+  invoiceItems.push({ name, price, qty: 1 });
+  document.getElementById('customName').value = '';
+  document.getElementById('customPrice').value = '';
+  renderAdded();
+}
+function renderAdded() {
+  const el = document.getElementById('addedItems');
+  el.innerHTML = '';
+  invoiceItems.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.innerHTML = `<span>${item.name} × ${item.qty} = $${(item.price * item.qty).toFixed(2)}</span>
+      <button onclick="removeItem(${i})" class="danger" style="width:auto">X</button>`;
+    el.appendChild(div);
+  });
+}
+function removeItem(i) {
+  invoiceItems.splice(i, 1);
+  renderAdded();
+}
+function previewInvoice() {
+  const transport = parseFloat(document.getElementById('invTransport').value) || 0;
+  const maint = parseFloat(document.getElementById('invMaint').value) || 0;
+  let sub = invoiceItems.reduce((s, it) => s + it.price * it.qty, 0);
+  const total = sub + transport + maint;
+  currentInvoice = { items: [...invoiceItems], transport, maint, total, date: new Date().toLocaleDateString() };
+
+  let html = `<div style="font-family:system-ui; color:#333; background:#FFF8F0; padding:16px;">
+    <div style="font-size:28px; font-weight:bold; color:#FF6600;">${profile.name}</div>
+    <div style="font-size:13px; margin-top:4px;">${profile.address || ''}<br>${profile.phone || ''} · ${profile.email || ''}<br>${profile.web || ''}</div>
+    <hr style="border:1px solid #FF6600; margin:12px 0;">
+    <div class="green" style="color:#6B8E23; font-size:14px;">Thanks for thinking of us</div>
+    <h3 style="margin:16px 0 8px;">Work accomplished</h3>`;
+  currentInvoice.items.forEach(it => {
+    html += `<div style="display:flex; justify-content:space-between; margin:4px 0;"><span>${it.name}</span><span>$${(it.price * it.qty).toFixed(2)}</span></div>`;
+  });
+  if (maint) html += `<div style="display:flex; justify-content:space-between; margin:4px 0; border-top:1px solid #ddd; padding-top:6px;"><span>General maintenance fee</span><span>$${maint.toFixed(2)}</span></div>`;
+  if (transport) html += `<div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Transportation</span><span>$${transport.toFixed(2)}</span></div>`;
+  html += `<div style="background:#FF6600; color:white; padding:10px; margin-top:12px; font-size:20px; font-weight:bold; text-align:right; border-radius:4px;">Total $${total.toFixed(2)}</div>
+  </div>`;
+  document.getElementById('invoicePreview').innerHTML = html;
+  showScreen('previewScreen');
+}
+function exportPNG() {
+  const canvas = document.getElementById('invoiceCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.fillStyle = '#FFF8F0';
+  ctx.fillRect(0, 0, w, h);
+
+  // Header
+  ctx.fillStyle = '#FF6600';
+  ctx.font = 'bold 42px system-ui, sans-serif';
+  ctx.fillText(profile.name, 40, 70);
+
+  ctx.fillStyle = '#333';
+  ctx.font = '16px system-ui, sans-serif';
+  let y = 100;
+  const addrLines = (profile.address || '').split('\n');
+  addrLines.forEach(line => { ctx.fillText(line, 40, y); y += 22; });
+  if (profile.phone) { ctx.fillText(profile.phone, 40, y); y += 22; }
+  if (profile.email) { ctx.fillText(profile.email, 40, y); y += 22; }
+  if (profile.web) { ctx.fillText(profile.web, 40, y); y += 22; }
+
+  // Orange line
+  y += 10;
+  ctx.strokeStyle = '#FF6600';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(w - 40, y); ctx.stroke();
+  y += 30;
+
+  // Thanks
+  ctx.fillStyle = '#6B8E23';
+  ctx.font = '18px system-ui, sans-serif';
+  ctx.fillText('Thanks for thinking of us', 40, y);
+  y += 40;
+
+  // Work
+  ctx.fillStyle = '#333';
+  ctx.font = 'bold 22px system-ui, sans-serif';
+  ctx.fillText('Work accomplished', 40, y);
+  y += 36;
+  ctx.font = '18px system-ui, sans-serif';
+  currentInvoice.items.forEach(it => {
+    ctx.fillText(it.name, 40, y);
+    ctx.fillText('$' + (it.price * it.qty).toFixed(2), w - 140, y);
+    y += 28;
+  });
+
+  y += 10;
+  if (currentInvoice.maint) {
+    ctx.fillText('General maintenance fee', 40, y);
+    ctx.fillText('$' + currentInvoice.maint.toFixed(2), w - 140, y);
+    y += 28;
+  }
+  if (currentInvoice.transport) {
+    ctx.fillText('Transportation', 40, y);
+    ctx.fillText('$' + currentInvoice.transport.toFixed(2), w - 140, y);
+    y += 28;
+  }
+
+  // Total bar
+  y += 20;
+  ctx.fillStyle = '#FF6600';
+  ctx.fillRect(40, y - 28, w - 80, 50);
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 28px system-ui, sans-serif';
+  ctx.fillText('Total  $' + currentInvoice.total.toFixed(2), w - 280, y + 4);
+
+  // Download
+  const link = document.createElement('a');
+  link.download = 'Hopps-Invoice-' + Date.now() + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// Enter key on PIN
+document.getElementById('pinInput').addEventListener('keyup', e => {
+  if (e.key === 'Enter') checkPin();
+});
+
+loadProfile();
+</script>
+</body>
+</html>
