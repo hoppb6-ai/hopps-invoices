@@ -203,6 +203,42 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
 .tag { display: inline-block; font-size: 12px; color: var(--blue); background: #E8EEF5; border-radius: 8px; padding: 1px 6px; margin-top: 4px; }
 .shift-l { flex: 0 0 56px !important; align-self: center; font-weight: 600; color: #555; }
 .note-item { cursor: pointer; }
+/* v4.2: checklist & AOCs */
+.cl-head, .cl-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cl-title button { width: auto; }
+.cl-prog { font-weight: 800; color: var(--orange); font-size: 18px; }
+.progress { height: 8px; background: #EFE6DA; border-radius: 4px; overflow: hidden; margin: 6px 0 8px; }
+.progress i { display: block; height: 100%; background: var(--olive); transition: width .2s; }
+.cl-item { border-top: 1px solid #f0e8de; padding: 6px 0; }
+.cl-item.done .check { color: var(--olive); }
+.cl-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.cl-top .check { padding: 4px 0; font-size: 16px; }
+.cl-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 6px; }
+.cl-f { margin: 0; font-size: 12px; }
+.cl-f input { margin: 2px 0; padding: 8px; }
+.cl-note { padding: 8px; font-size: 14px; margin: 4px 0 0; }
+input.oor, td.oor { color: #c0392b !important; font-weight: 800; border-color: #c0392b; background: #FDECEA; }
+.badge.part { background: #E08E0B; }
+#clockChecklist { margin-top: 4px; }
+.cl-ed-field { display: grid; grid-template-columns: 2fr 1fr 1.2fr 1fr 1fr auto; gap: 4px; align-items: center; }
+.cl-ed-field input, .cl-ed-field select { padding: 6px; font-size: 14px; margin: 2px 0; }
+.aoc-card { background: white; border-left: 5px solid #888; border-radius: 10px; padding: 10px 12px; margin: 8px 0; box-shadow: 0 1px 4px rgba(0,0,0,.08); cursor: pointer; }
+.aoc-card.sev-High { border-left-color: #c0392b; } .aoc-card.sev-Med { border-left-color: #E08E0B; }
+.aoc-card .top { display: flex; justify-content: space-between; gap: 6px; }
+.pa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
+.pa-grid > div { background: var(--light); border-radius: 8px; padding: 6px 8px; min-width: 0; overflow-wrap: anywhere; }
+.pa-grid.edit > div { background: none; padding: 0; }
+.pa-grid small { color: #777; font-weight: 700; }
+@media (max-width: 360px) { .pa-grid { grid-template-columns: 1fr; } }
+.dot.aoc { background: #c0392b; border-radius: 1px; transform: rotate(45deg); }
+.dot.aocm { background: #E08E0B; border-radius: 1px; transform: rotate(45deg); }
+.dot.ck { background: white; border: 2px solid var(--olive); }
+.dot.ck.full { background: var(--olive); }
+.table-wrap { overflow-x: auto; background: white; border-radius: 12px; }
+table.rd { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.rd th, table.rd td { padding: 8px 6px; border-bottom: 1px solid #f0e8de; text-align: right; white-space: nowrap; }
+table.rd th:first-child, table.rd td:first-child { text-align: left; }
+table.rd tr { cursor: pointer; }
 </style>
 </head>
 <body class="locked">
@@ -364,9 +400,11 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
     <button data-mode="all" onclick="setMode('all')">All</button>
   </div>
   <div class="card" id="clockCard" style="display:none">
-    <div class="clock-row"><div><b id="clockTitle">Today</b><div class="muted" id="clockStatus"></div></div>
+    <div class="clock-row"><div><b id="clockTitle">Today</b><div class="muted" id="clockStatus"></div><span id="clockChecklist" class="badge"></span></div>
     <button id="clockBtn" onclick="clockToggle()" style="width:auto">Clock in</button></div>
   </div>
+  <div class="card" id="nwhChecklist" style="display:none"></div>
+  <div class="card" id="nwhAocs" style="display:none"></div>
   <div id="periodSlot"></div>
   <div class="card cal-card" id="calCard">
     <div class="cal-head">
@@ -423,15 +461,16 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
     </div>
     <div id="dPaidWrap" style="display:none"><label>Paid hours (PTO / Sick / Holiday)</label><input id="dPaidHours" type="number" step="0.25" oninput="updateHoursInfo()"></div>
     <div id="dHoursInfo" class="hours-info"></div>
+    <div id="dChecklist" class="sub-card"></div>
+    <div id="dAocs" class="sub-card aoc-box"></div>
     <details class="boiler" id="boilerBox">
       <summary>🔥 Boiler log (optional)</summary>
       <div class="row2">
         <div><label>Steam pressure (psi)</label><input id="bPressure" inputmode="decimal" placeholder="e.g. 125"></div>
-        <div><label>Blowdowns done</label><input id="bBlowdowns" placeholder="e.g. 2 (bottom), 1 surface"></div>
       </div>
       <label>Water level checks</label><input id="bWater" placeholder="e.g. Gauge glass OK 7am/11am, low-water cutoff tested">
       <label>Fuel / wood fired</label><input id="bFuel" placeholder="e.g. hog fuel, ~18 tons">
-      <label>Chemical tests</label><input id="bChem" placeholder="e.g. pH 11.0, TDS 2800, sulfite 40 ppm">
+      <p class="muted" style="margin:6px 0 0">Chemical tests and blowdowns are recorded in the daily checklist.</p>
       <label>Incidents / maintenance</label><textarea id="bIncidents" rows="2"></textarea>
     </details>
     <label>Work notes</label><textarea id="dWorkNotes" rows="4"></textarea>
@@ -479,6 +518,63 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
   <button onclick="showScreen('calendar')" class="secondary">Back</button>
 </div>
 
+<!-- AOC list -->
+<div id="aocs" class="screen">
+  <h2>AOCs</h2>
+  <p class="muted" style="margin-top:-8px">Abnormal Operating Conditions</p>
+  <button class="danger" onclick="openAoc(null, null, 'aocs')">＋ New AOC</button>
+  <input id="aocSearch" type="search" placeholder="Search title, cause, findings, actions, tags..." oninput="renderAocList()">
+  <div class="row2">
+    <select id="aocFEquip" onchange="renderAocList()"><option value="all">All equipment</option><option>Boiler 1</option><option>Boiler 2</option><option>Both</option><option>Other</option></select>
+    <select id="aocFStatus" onchange="renderAocList()"><option value="all">All statuses</option><option value="active">Open + Monitoring</option><option>Open</option><option>Monitoring</option><option>Resolved</option></select>
+    <select id="aocFSev" onchange="renderAocList()"><option value="all">All severity</option><option>High</option><option>Med</option><option>Low</option></select>
+  </div>
+  <p class="muted" id="aocCount"></p>
+  <div id="aocList"></div>
+  <button onclick="openNwh()" class="secondary">Back to NWH</button>
+</div>
+
+<!-- AOC editor -->
+<div id="aocEdit" class="screen">
+  <h2 id="aocTitle">New AOC</h2>
+  <div class="card">
+    <div class="row2">
+      <div><label>Date</label><input id="aDate" type="date"></div>
+      <div><label>Time</label><input id="aTime" type="time"></div>
+    </div>
+    <div class="row2">
+      <div><label>Equipment</label><select id="aEquip" onchange="aocEquipChanged()"><option>Boiler 1</option><option>Boiler 2</option><option>Both</option><option value="Other">Other / custom</option></select></div>
+      <div><label>Severity</label><select id="aSeverity"><option>Low</option><option>Med</option><option>High</option></select></div>
+    </div>
+    <input id="aEquipOther" placeholder="Equipment name (e.g. Feedwater pump #2)" style="display:none">
+    <label>Short title</label>
+    <input id="aTitle" placeholder="e.g. Low drum level alarm">
+    <div class="pa-grid edit">
+      <div><label>Probable <small>(expected / suspected cause)</small></label><textarea id="aProbable" rows="4"></textarea></div>
+      <div><label>Actual <small>(what was found / happened)</small></label><textarea id="aActual" rows="4"></textarea></div>
+    </div>
+    <label>Actions taken</label>
+    <textarea id="aActions" rows="3"></textarea>
+    <div class="row2">
+      <div><label>Status</label><select id="aStatus" onchange="aocStatusChanged()"><option>Open</option><option>Monitoring</option><option>Resolved</option></select></div>
+      <div id="aResolvedWrap"><label>Resolved date</label><input id="aResolved" type="date"></div>
+    </div>
+    <label>Tags</label>
+    <input id="aTags" placeholder="comma separated">
+  </div>
+  <button onclick="saveAoc()">Save AOC</button>
+  <button onclick="deleteAoc()" class="danger" id="aocDeleteBtn">Delete AOC</button>
+  <button onclick="backFromAoc()" class="secondary">Cancel</button>
+</div>
+
+<!-- Readings history -->
+<div id="readings" class="screen">
+  <h2>Readings history</h2>
+  <select id="rdItem" onchange="renderReadings()"></select>
+  <div id="rdTable"></div>
+  <button onclick="openNwh()" class="secondary">Back to NWH</button>
+</div>
+
 <!-- Notes -->
 <div id="notes" class="screen">
   <h2>Notes</h2>
@@ -522,6 +618,16 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
     <div class="row2"><span class="shift-l">Swing</span><input id="sSwingS" type="time"><input id="sSwingE" type="time"></div>
     <div class="row2"><span class="shift-l">Night</span><input id="sNightS" type="time"><input id="sNightE" type="time"></div>
     <button onclick="saveSettings()">Save Settings</button>
+  </div>
+  <div class="card">
+    <h3>✅ Daily checklist</h3>
+    <p class="muted">Reorder, rename, add or remove items. Value fields can have a unit and an optional normal range (min/max); readings outside it show in red.</p>
+    <div id="clEditor"></div>
+    <div class="row2"><input id="clNewItem" placeholder="New item name" style="flex:2"><label class="check pin"><input type="checkbox" id="clNewValue"> value</label></div>
+    <button class="secondary" onclick="clEdAdd()">＋ Add item</button>
+    <button onclick="clEdSave()">Save Checklist</button>
+    <button class="danger" onclick="clEdReset()">Reset to defaults</button>
+    <div class="btn-row"><button class="small secondary" onclick="showScreen('readings')">📈 Readings history</button><button class="small secondary" onclick="showScreen('aocs')">⚠️ AOC list</button></div>
   </div>
   <div class="card">
     <h3>🧾 Business</h3>
@@ -767,7 +873,7 @@ let catalogue = JSON.parse(JSON.stringify(defaultCatalogue));
 /* ---------- Storage helpers (localStorage only) ---------- */
 const KEYS = ['hoppsProfile', 'hoppsCatalogue', 'hoppsInvoices', 'hoppsNextNum', 'hoppsLog', 'hoppsCustomers',
   'hoppsQuotes', 'hoppsNextQuote', 'hoppsJobs', 'hoppsNextJob', 'hoppsExamplesDismissed',
-  'hoppsWork', 'hoppsPersonal', 'hoppsSettings', 'hoppsSchema', 'hoppsCalMode', 'hoppsCalView'];
+  'hoppsWork', 'hoppsPersonal', 'hoppsSettings', 'hoppsSchema', 'hoppsCalMode', 'hoppsCalView', 'hoppsAocs'];
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
 }
@@ -870,8 +976,10 @@ function showScreen(id) {
   if (id === 'jobDetail') renderJobDetail();
   if (id !== 'jobDetail') clearInterval(timerTick);
   if (id === 'notes') renderNotes();
-  if (id === 'more') fillSettings();
-  const tabFor = { calendar: 'calendar', dayEditor: 'calendar', notes: 'notes', more: 'more', profile: 'more', backup: 'more', catalogEditor: 'more' };
+  if (id === 'more') { fillSettings(); clDraft = null; clEdRender(); }
+  if (id === 'aocs') renderAocList();
+  if (id === 'readings') renderReadings();
+  const tabFor = { calendar: 'calendar', dayEditor: 'calendar', notes: 'notes', more: 'more', aocs: 'nwh', aocEdit: 'nwh', readings: 'nwh', profile: 'more', backup: 'more', catalogEditor: 'more' };
   let tab = tabFor[id] || 'menu';
   if (tab === 'calendar' && nwhView) tab = 'nwh';
   document.querySelectorAll('#tabBar button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
@@ -1440,13 +1548,14 @@ function ceReset() {
 
 /* ---------- Settings, work & personal data ---------- */
 const DEFAULT_SETTINGS = {
-  employer: 'Northwest Hardwoods', abbr: 'NWH', title: 'Boiler Operator', wage: 0, ptoHours: 8,
+  checklist: null, employer: 'Northwest Hardwoods', abbr: 'NWH', title: 'Boiler Operator', wage: 0, ptoHours: 8,
   otDaily: 8, otWeekly: 40, payLen: 14, payStart: '2026-01-04', weekStart: 0,
   shifts: { Day: ['06:00', '14:00'], Swing: ['14:00', '22:00'], Night: ['22:00', '06:00'] }
 };
 function getSettings() {
   const s = Object.assign({}, DEFAULT_SETTINGS, load('hoppsSettings', {}));
   s.shifts = Object.assign({}, DEFAULT_SETTINGS.shifts, s.shifts || {});
+  s.checklist = Array.isArray(s.checklist) ? s.checklist : JSON.parse(JSON.stringify(DEFAULT_CHECKLIST));
   return s;
 }
 const getWork = () => load('hoppsWork', {});
@@ -1460,7 +1569,34 @@ const fmtTime = t => t ? new Date('2000-01-01T' + t).toLocaleTimeString('en-US',
 
 // One-time upgrade of v3 data: the old "Went to work" flag lived in the side-business log.
 function migrateData() {
-  if (load('hoppsSchema', 0) >= 4) return;
+  const v = load('hoppsSchema', 0);
+  if (v < 4) migrateV4();
+  if (v < 5) migrateV5();
+}
+// v4.2: boiler-log chemical tests and blowdowns now live in the daily checklist
+function migrateV5() {
+  const W = getWork();
+  Object.values(W).forEach(w => {
+    const b = w.boiler; if (!b) return;
+    if (b.blowdowns && String(b.blowdowns).trim()) {
+      w.checklist = w.checklist || {};
+      const r = w.checklist.blowdown || {};
+      r.done = true; r.note = [r.note, String(b.blowdowns).trim()].filter(Boolean).join(' · ');
+      w.checklist.blowdown = r;
+    }
+    if (b.chem && String(b.chem).trim()) {
+      // boiler isn't known from the old free-text field, so keep it as a note on the overall check
+      w.checklist = w.checklist || {};
+      const r = w.checklist.overall || {};
+      r.note = [r.note, 'Chem (old log): ' + String(b.chem).trim()].filter(Boolean).join(' · ');
+      w.checklist.overall = r;
+    }
+    delete b.blowdowns; delete b.chem;
+    if (!Object.keys(b).length) delete w.boiler;
+  });
+  store('hoppsWork', W); store('hoppsSchema', 5);
+}
+function migrateV4() {
   const log = getLog(), work = getWork();
   Object.keys(log).forEach(k => {
     const e = log[k];
@@ -1532,7 +1668,7 @@ function payPeriodFor(key) {
   const ps = addDays(start, n * S.payLen);
   return [ymd(ps), ymd(addDays(ps, S.payLen - 1))];
 }
-const hasWork = w => w && (w.worked || (w.dayType && w.dayType !== 'Regular') || w.start || w.end || (w.notes || '').trim() || w.pinned || (w.tags || []).length || Object.values(w.boiler || {}).some(v => String(v).trim()));
+const hasWork = w => w && (Object.keys(w.checklist || {}).length > 0 || w.worked || (w.dayType && w.dayType !== 'Regular') || w.start || w.end || (w.notes || '').trim() || w.pinned || (w.tags || []).length || Object.values(w.boiler || {}).some(v => String(v).trim()));
 const hasPersonal = p => p && ((p.events || []).length || (p.notes || '').trim() || p.mood || p.energy || p.pinned || (p.tags || []).length);
 function hasEntry(e) { return e && (e.side || (e.job || '').trim() || (e.notes || '').trim() || Object.keys(e.invoices || {}).length || e.pinned || (e.tags || []).length); }
 
@@ -1576,6 +1712,14 @@ function dayDots(key, mode, ctx) {
     if (c && c.ot > 0) d += '<i class="dot ot"></i>';
     if ((w.notes || '').trim() || Object.values(w.boiler || {}).some(v => String(v).trim())) d += '<i class="dot note"></i>';
   }
+  if (mode === 'work' && w && w.checklist) {
+    const pr = checklistProgress(key, ctx.work);
+    if (pr.done) d += `<i class="dot ck${pr.done === pr.total ? ' full' : ''}" title="Checklist ${pr.done}/${pr.total}"></i>`;
+  }
+  if ((mode === 'work' || mode === 'all') && ctx.aocs[key]) {
+    const hot = ctx.aocs[key].some(a => a.severity === 'High' && a.status !== 'Resolved');
+    d += `<i class="dot ${hot ? 'aoc' : 'aocm'}"></i>`;
+  }
   if (mode === 'side') {
     if (sideAny) d += '<i class="dot side"></i>';
     if ((s.notes || '').trim()) d += '<i class="dot note"></i>';
@@ -1612,7 +1756,7 @@ function renderCalendar() {
   document.getElementById('calendar').dataset.mode = calMode;
   const S = getSettings();
   const ctx = { work: getWork(), calc: workCalc(), log: getLog(), pers: getPersonal() };
-  const jd = jobDays(); ctx.sched = jd.sched; ctx.jobWorked = jd.worked;
+  const jd = jobDays(); ctx.sched = jd.sched; ctx.jobWorked = jd.worked; ctx.aocs = aocsByDay();
   const today = ymd(new Date());
   calYear = calFocus.getFullYear(); calMonth = calFocus.getMonth();
   const dowNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -1644,7 +1788,7 @@ function renderCalendar() {
 
   // Legend
   const LG = {
-    work: [['work', 'Worked'], ['ot', 'Overtime'], ['pto', 'PTO / Sick / Holiday'], ['off', 'Off'], ['note', 'Notes / boiler log']],
+    work: [['work', 'Worked'], ['ot', 'Overtime'], ['pto', 'PTO / Sick / Holiday'], ['off', 'Off'], ['note', 'Notes / boiler log'], ['ck full', 'Checklist done'], ['ck', 'Checklist partial'], ['aoc', 'AOC (high, open)'], ['aocm', 'AOC']],
     side: [['side', 'Side project / invoice'], ['sched', 'Job scheduled'], ['note', 'Journal note']],
     personal: [['pers', 'Event / reminder'], ['note', 'Journal note']],
     all: [['work', 'Work'], ['side', 'Side business'], ['pers', 'Personal']]
@@ -1661,6 +1805,7 @@ function renderCalendar() {
     document.getElementById('clockStatus').textContent = inNow ? `Clocked in at ${fmtTime(t.start)}` : (t.start && t.end ? `Today ${fmtTime(t.start)} – ${fmtTime(t.end)} (${ctx.calc[today] ? ctx.calc[today].hours : 0} h)` : 'Not clocked in today');
     const btn = document.getElementById('clockBtn');
     btn.textContent = inNow ? 'Clock out' : 'Clock in';
+    updateClockProgress();
     btn.className = inNow ? 'danger' : '';
   }
 
@@ -1688,6 +1833,10 @@ function renderCalendar() {
   document.getElementById('monthSummary').innerHTML = `<div class="sum-label">${label} · ${MODES[calMode]}</div>` + sum;
 
   // Pay period + weekly OT (work mode)
+  const nwh = nwhView && calMode === 'work';
+  const ncl = document.getElementById('nwhChecklist'), nao = document.getElementById('nwhAocs');
+  ncl.style.display = nao.style.display = nwh ? 'block' : 'none';
+  if (nwh) { const c = nwhCardsHtml(); ncl.innerHTML = c.checklist; nao.innerHTML = c.aocs; }
   const pc = document.getElementById('periodCard');
   if (nwhView && calMode === 'work') document.getElementById('periodSlot').appendChild(pc);
   else document.getElementById('monthSummary').after(pc);
@@ -1833,7 +1982,7 @@ function openDay(key, sec) {
   document.getElementById('dBreak').value = w.breakMin || '';
   document.getElementById('dPaidHours').value = w.paidHours != null ? w.paidHours : '';
   const b = w.boiler || {};
-  [['bPressure', 'pressure'], ['bBlowdowns', 'blowdowns'], ['bWater', 'water'], ['bFuel', 'fuel'], ['bChem', 'chem'], ['bIncidents', 'incidents']].forEach(([id, f]) => document.getElementById(id).value = b[f] || '');
+  [['bPressure', 'pressure'], ['bWater', 'water'], ['bFuel', 'fuel'], ['bIncidents', 'incidents']].forEach(([id, f]) => document.getElementById(id).value = b[f] || '');
   document.getElementById('boilerBox').open = Object.values(b).some(v => String(v).trim());
   document.getElementById('dWorkNotes').value = w.notes || '';
   document.getElementById('dWorkTags').value = (w.tags || []).join(', ');
@@ -1860,6 +2009,8 @@ function openDay(key, sec) {
   document.getElementById('dPersPin').checked = !!p.pinned;
   ['pevTitle', 'pevTime', 'pevNotes'].forEach(id => document.getElementById(id).value = '');
   showScreen('dayEditor');
+  document.getElementById('dChecklist').innerHTML = checklistHtml(key);
+  document.getElementById('dAocs').innerHTML = dayAocHtml(key);
   showDaySec(sec || (calMode === 'all' ? (hasWork(w) ? 'work' : hasEntry(e) ? 'side' : hasPersonal(p) ? 'personal' : 'work') : calMode));
   updateHoursInfo();
 }
@@ -1875,7 +2026,7 @@ function readWorkForm() {
   const w = {
     worked: document.getElementById('dWork').checked, dayType: v('dType'), shift: v('dShift'),
     start: v('dStart'), end: v('dEnd'), notes: v('dWorkNotes'), tags: parseTags(v('dWorkTags')), pinned: document.getElementById('dWorkPin').checked,
-    boiler: { pressure: v('bPressure'), blowdowns: v('bBlowdowns'), water: v('bWater'), fuel: v('bFuel'), chem: v('bChem'), incidents: v('bIncidents') }
+    boiler: { pressure: v('bPressure'), water: v('bWater'), fuel: v('bFuel'), incidents: v('bIncidents') }
   };
   if (w.shift === 'Custom') w.shiftName = v('dShiftCustom').trim();
   if (v('dBreak')) w.breakMin = Number(v('dBreak'));
@@ -1919,6 +2070,7 @@ function saveDay() {
   const W = getWork(), oldW = W[key];
   const w = readWorkForm();
   if (oldW && oldW.clockedIn && !w.end) w.clockedIn = true;
+  if (oldW && oldW.checklist) w.checklist = oldW.checklist; // checklist saves itself as you tick items
   if (hasWork(w)) { if (oldW && oldW.isExample && sameData(oldW, w)) w.isExample = true; W[key] = w; } else delete W[key];
   store('hoppsWork', W);
   // Side (keeps invoice links)
@@ -1957,6 +2109,238 @@ function clearDay() {
   showScreen('calendar');
 }
 
+/* ---------- Daily checklist ---------- */
+const DEFAULT_CHECKLIST = [
+  { id: 'meter', label: 'Meter reading', fields: [{ key: 'reading', label: 'Reading', unit: '', type: 'number' }] },
+  { id: 'b1sys', label: 'Boiler 1 systems check', fields: [] },
+  { id: 'b2sys', label: 'Boiler 2 systems check', fields: [] },
+  { id: 'b1chem', label: 'Boiler 1 chemical tests', fields: [{ key: 'sulfite', label: 'Sulfite', unit: 'ppm', type: 'number' }, { key: 'ph', label: 'pH', unit: '', type: 'number' }, { key: 'cond', label: 'Conductivity', unit: 'µS/cm', type: 'number' }] },
+  { id: 'b2chem', label: 'Boiler 2 chemical tests', fields: [{ key: 'sulfite', label: 'Sulfite', unit: 'ppm', type: 'number' }, { key: 'ph', label: 'pH', unit: '', type: 'number' }, { key: 'cond', label: 'Conductivity', unit: 'µS/cm', type: 'number' }] },
+  { id: 'overall', label: 'Overall system check', fields: [] },
+  { id: 'blowdown', label: 'Blowdown cycle', fields: [{ key: 'time', label: 'Time', unit: '', type: 'time' }] }
+];
+const getChecklist = () => getSettings().checklist;
+const outOfRange = (f, v) => f.type !== 'time' && v !== '' && v != null && !isNaN(v) && ((f.min !== undefined && f.min !== '' && Number(v) < Number(f.min)) || (f.max !== undefined && f.max !== '' && Number(v) > Number(f.max)));
+function checklistProgress(day, W) {
+  const items = getChecklist(), cl = ((W || getWork())[day] || {}).checklist || {};
+  const done = items.filter(it => cl[it.id] && cl[it.id].done).length;
+  return { done, total: items.length };
+}
+function checklistHtml(day) {
+  const items = getChecklist(), cl = (getWork()[day] || {}).checklist || {};
+  const { done, total } = checklistProgress(day);
+  return `<div class="cl" data-cl="${day}">
+    <div class="cl-head"><b>✅ Daily checklist</b><span class="cl-prog">${done}/${total}</span></div>
+    <div class="progress"><i style="width:${total ? Math.round(done / total * 100) : 0}%"></i></div>
+    ${items.map(it => {
+      const r = cl[it.id] || {}, vals = r.values || {};
+      return `<div class="cl-item${r.done ? ' done' : ''}" data-item="${it.id}">
+        <div class="cl-top"><label class="check"><input type="checkbox" ${r.done ? 'checked' : ''} onchange="clSet(this,'${day}','${it.id}','done')"> ${esc(it.label)}</label>
+        <span class="muted cl-at">${r.done && r.at ? '✓ ' + new Date(r.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</span></div>
+        ${it.fields.length ? `<div class="cl-fields">${it.fields.map(f => `<label class="cl-f">${esc(f.label)}${f.unit ? ` <small>(${esc(f.unit)})</small>` : ''}
+          <input type="${f.type === 'time' ? 'time' : 'number'}" step="any" inputmode="decimal" value="${esc(vals[f.key] != null ? vals[f.key] : '')}" class="${outOfRange(f, vals[f.key]) ? 'oor' : ''}" data-field="${f.key}" onchange="clSet(this,'${day}','${it.id}','value','${f.key}')"></label>`).join('')}</div>` : ''}
+        <input class="cl-note" placeholder="Note (optional)" value="${esc(r.note || '')}" onchange="clSet(this,'${day}','${it.id}','note')">
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+// Saves one checklist change immediately and updates the UI in place (keeps keyboard focus).
+function clSet(el, day, id, what, key) {
+  const W = getWork(), e = W[day] || {};
+  e.checklist = e.checklist || {};
+  const r = e.checklist[id] || {};
+  const item = getChecklist().find(i => i.id === id) || { fields: [] };
+  if (what === 'done') { r.done = el.checked; if (el.checked) r.at = new Date().toISOString(); else delete r.at; }
+  if (what === 'value') {
+    r.values = r.values || {};
+    const f = item.fields.find(x => x.key === key) || {};
+    if (el.value === '') delete r.values[key]; else r.values[key] = f.type === 'time' ? el.value : Number(el.value);
+    el.classList.toggle('oor', outOfRange(f, r.values[key]));
+    if (!Object.keys(r.values).length) delete r.values;
+  }
+  if (what === 'note') { if (el.value.trim()) r.note = el.value; else delete r.note; }
+  if (Object.keys(r).length && (r.done || r.values || r.note)) e.checklist[id] = r; else delete e.checklist[id];
+  if (!Object.keys(e.checklist).length) delete e.checklist;
+  delete e.isExample;
+  if (hasWork(e)) W[day] = e; else delete W[day];
+  store('hoppsWork', W);
+  document.querySelectorAll(`.cl[data-cl="${day}"]`).forEach(box => {
+    const p = checklistProgress(day);
+    box.querySelector('.cl-prog').textContent = `${p.done}/${p.total}`;
+    box.querySelector('.progress i').style.width = (p.total ? Math.round(p.done / p.total * 100) : 0) + '%';
+    const it = box.querySelector(`.cl-item[data-item="${id}"]`);
+    if (it) { it.classList.toggle('done', !!r.done); it.querySelector('.cl-at').textContent = r.done && r.at ? '✓ ' + new Date(r.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''; if (box !== el.closest('.cl')) it.querySelector('input[type=checkbox]').checked = !!r.done; }
+  });
+  updateClockProgress();
+  // refresh that day's calendar dots without re-rendering (keeps focus)
+  const dots = document.querySelector(`#calGrid [data-day="${day}"] .dots`);
+  if (dots) {
+    const jd = jobDays();
+    dots.innerHTML = dayDots(day, calMode, { work: getWork(), calc: workCalc(), log: getLog(), pers: getPersonal(), aocs: aocsByDay(), sched: jd.sched, jobWorked: jd.worked });
+  }
+}
+function updateClockProgress() {
+  const el = document.getElementById('clockChecklist'); if (!el) return;
+  const p = checklistProgress(ymd(new Date()));
+  el.textContent = `Checklist ${p.done}/${p.total}`;
+  el.className = 'badge ' + (p.done === p.total && p.total ? 'paid' : p.done ? 'part' : 'unpaid');
+}
+
+/* Checklist editor (More) */
+let clDraft = null;
+function clEdRender() {
+  if (!clDraft) clDraft = JSON.parse(JSON.stringify(getChecklist()));
+  document.getElementById('clEditor').innerHTML = clDraft.map((it, i) => `
+    <div class="sub-card">
+      <div class="row2"><input value="${esc(it.label)}" onchange="clDraft[${i}].label=this.value" style="flex:3">
+        <button class="small secondary" onclick="clEdMove(${i},-1)" aria-label="Move up">↑</button>
+        <button class="small secondary" onclick="clEdMove(${i},1)" aria-label="Move down">↓</button>
+        <button class="small danger" onclick="clDraft.splice(${i},1);clEdRender()" aria-label="Remove item">✕</button></div>
+      ${it.fields.map((f, j) => `<div class="cl-ed-field">
+        <input value="${esc(f.label)}" placeholder="Value name" onchange="clDraft[${i}].fields[${j}].label=this.value">
+        <input value="${esc(f.unit || '')}" placeholder="Unit" onchange="clDraft[${i}].fields[${j}].unit=this.value">
+        <select onchange="clDraft[${i}].fields[${j}].type=this.value"><option value="number"${f.type !== 'time' ? ' selected' : ''}>Number</option><option value="time"${f.type === 'time' ? ' selected' : ''}>Time</option></select>
+        <input type="number" step="any" value="${f.min != null ? f.min : ''}" placeholder="Min" onchange="clDraft[${i}].fields[${j}].min=this.value===''?undefined:Number(this.value)">
+        <input type="number" step="any" value="${f.max != null ? f.max : ''}" placeholder="Max" onchange="clDraft[${i}].fields[${j}].max=this.value===''?undefined:Number(this.value)">
+        <button class="small danger" onclick="clDraft[${i}].fields.splice(${j},1);clEdRender()" aria-label="Remove value field">✕</button></div>`).join('')}
+      <button class="small secondary" onclick="clDraft[${i}].fields.push({key:'f'+Date.now().toString(36),label:'Value',unit:'',type:'number'});clEdRender()">＋ Value field</button>
+    </div>`).join('');
+}
+function clEdMove(i, d) { const j = i + d; if (j < 0 || j >= clDraft.length) return; [clDraft[i], clDraft[j]] = [clDraft[j], clDraft[i]]; clEdRender(); }
+function clEdAdd() {
+  const name = document.getElementById('clNewItem').value.trim(); if (!name) return;
+  clDraft.push({ id: 'i' + Date.now().toString(36), label: name, fields: document.getElementById('clNewValue').checked ? [{ key: 'value', label: 'Value', unit: '', type: 'number' }] : [] });
+  document.getElementById('clNewItem').value = ''; clEdRender();
+}
+function clEdSave() {
+  const s = load('hoppsSettings', {}); s.checklist = clDraft; store('hoppsSettings', s);
+  clDraft = null; clEdRender(); toast('Checklist saved');
+}
+function clEdReset() {
+  if (!confirm('Reset the checklist to the default items? Logged values are kept.')) return;
+  clDraft = JSON.parse(JSON.stringify(DEFAULT_CHECKLIST)); clEdRender();
+}
+
+/* Readings history */
+function renderReadings() {
+  const items = getChecklist().filter(it => it.fields.length);
+  const sel = document.getElementById('rdItem');
+  const cur = sel.value;
+  sel.innerHTML = items.map(it => `<option value="${it.id}">${esc(it.label)}</option>`).join('');
+  if (items.some(it => it.id === cur)) sel.value = cur;
+  const it = items.find(x => x.id === sel.value);
+  const W = getWork();
+  if (!it) { document.getElementById('rdTable').innerHTML = '<p class="muted">No checklist items with values. Add value fields in More.</p>'; return; }
+  const days = Object.keys(W).filter(k => W[k].checklist && W[k].checklist[it.id] && W[k].checklist[it.id].values).sort().reverse().slice(0, 30);
+  const rng = f => (f.min != null && f.min !== '') || (f.max != null && f.max !== '') ? `<br><small class="muted">${f.min != null && f.min !== '' ? f.min : '…'}–${f.max != null && f.max !== '' ? f.max : '…'}</small>` : '';
+  document.getElementById('rdTable').innerHTML = days.length ? `<div class="table-wrap"><table class="rd">
+    <tr><th>Date</th>${it.fields.map(f => `<th>${esc(f.label)}${f.unit ? ` <small>(${esc(f.unit)})</small>` : ''}${rng(f)}</th>`).join('')}</tr>
+    ${days.map(k => { const v = W[k].checklist[it.id].values; return `<tr onclick="openDay('${k}','work')"><td>${parseYmd(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${W[k].isExample ? ' <span class="badge ex">EX</span>' : ''}</td>${it.fields.map(f => `<td class="${outOfRange(f, v[f.key]) ? 'oor' : ''}">${v[f.key] != null ? esc(v[f.key]) : '—'}</td>`).join('')}</tr>`; }).join('')}
+  </table></div><p class="muted">Newest first. Red = outside the normal range set in More → Daily checklist. Tap a row to open that day.</p>` : '<p class="muted">No readings recorded yet for this item.</p>';
+}
+
+/* ---------- Abnormal Operating Conditions (AOCs) ---------- */
+const getAocs = () => load('hoppsAocs', []);
+const AOC_STATUS_ORDER = { Open: 0, Monitoring: 1, Resolved: 2 };
+const SEV_COLORS = { High: '#c0392b', Med: '#E08E0B', Low: '#888' };
+const STATUS_COLORS = { Open: '#c0392b', Monitoring: '#E08E0B', Resolved: '#6B8E23' };
+const aocEquip = a => a.equipment === 'Other' ? (a.equipOther || 'Other') : a.equipment;
+function aocsByDay() { const m = {}; getAocs().forEach(a => (m[a.date] = m[a.date] || []).push(a)); return m; }
+function aocSort(list) { return list.slice().sort((a, b) => (AOC_STATUS_ORDER[a.status] - AOC_STATUS_ORDER[b.status]) || (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))); }
+function aocCard(a) {
+  return `<div class="aoc-card sev-${a.severity}" onclick="openAoc('${a.id}')">
+    <div class="top"><b>${esc(a.title || 'Untitled AOC')}</b>${exBadge(a)}</div>
+    <div class="muted">${niceDate(a.date)}${a.time ? ' ' + fmtTime(a.time) : ''} · ${esc(aocEquip(a))}
+      <span class="badge" style="background:${SEV_COLORS[a.severity]}">${esc(a.severity)}</span>
+      <span class="badge" style="background:${STATUS_COLORS[a.status]}">${esc(a.status)}</span></div>
+    <div class="pa-grid"><div><small>Probable</small><div>${esc(a.probable || '—')}</div></div><div><small>Actual</small><div>${esc(a.actual || '—')}</div></div></div>
+    ${a.actions ? `<div class="muted"><b>Actions:</b> ${esc(a.actions)}</div>` : ''}
+    ${a.status === 'Resolved' && a.resolved ? `<div class="muted">Resolved ${niceDate(a.resolved)}</div>` : ''}
+    ${(a.tags || []).length ? `<div>${a.tags.map(t => `<span class="tag">#${esc(t)}</span>`).join(' ')}</div>` : ''}
+  </div>`;
+}
+let aocEditing = null, aocReturn = 'aocs';
+function openAoc(id, day, ret) {
+  const a = id ? getAocs().find(x => x.id === id) : null;
+  aocEditing = a ? a.id : null;
+  aocReturn = ret || (document.querySelector('.screen.active') || {}).id || 'aocs';
+  if (aocReturn === 'aocEdit') aocReturn = 'aocs';
+  const now = new Date();
+  const v = a || { date: day || ymd(now), time: day && day !== ymd(now) ? '' : nowHM(), equipment: 'Boiler 1', severity: 'Med', status: 'Open' };
+  const set = (id, val) => document.getElementById(id).value = val == null ? '' : val;
+  document.getElementById('aocTitle').textContent = a ? 'Edit AOC' : 'New AOC';
+  set('aDate', v.date); set('aTime', v.time); set('aEquip', v.equipment); set('aEquipOther', v.equipOther); set('aTitle', v.title);
+  set('aProbable', v.probable); set('aActual', v.actual); set('aSeverity', v.severity); set('aActions', v.actions);
+  set('aStatus', v.status); set('aResolved', v.resolved); set('aTags', (v.tags || []).join(', '));
+  aocEquipChanged(); aocStatusChanged();
+  document.getElementById('aocDeleteBtn').style.display = a ? 'block' : 'none';
+  showScreen('aocEdit');
+}
+function aocEquipChanged() { document.getElementById('aEquipOther').style.display = document.getElementById('aEquip').value === 'Other' ? 'block' : 'none'; }
+function aocStatusChanged() {
+  const res = document.getElementById('aStatus').value === 'Resolved';
+  document.getElementById('aResolvedWrap').style.display = res ? 'block' : 'none';
+  if (res && !document.getElementById('aResolved').value) document.getElementById('aResolved').value = ymd(new Date());
+}
+function saveAoc() {
+  const v = id => document.getElementById(id).value;
+  const title = v('aTitle').trim();
+  if (!title) { toast('Add a short title'); return; }
+  const list = getAocs();
+  const old = list.find(x => x.id === aocEditing);
+  const a = {
+    id: old ? old.id : 'AOC-' + Date.now().toString(36), created: old ? old.created : new Date().toISOString(),
+    date: v('aDate') || ymd(new Date()), time: v('aTime'), equipment: v('aEquip'), equipOther: v('aEquip') === 'Other' ? v('aEquipOther').trim() : '',
+    title, probable: v('aProbable').trim(), actual: v('aActual').trim(), severity: v('aSeverity'), actions: v('aActions').trim(),
+    status: v('aStatus'), resolved: v('aStatus') === 'Resolved' ? v('aResolved') : '', tags: parseTags(v('aTags'))
+  };
+  if (old) list[list.indexOf(old)] = a; else list.push(a);
+  store('hoppsAocs', list);
+  toast('AOC saved');
+  backFromAoc();
+}
+function deleteAoc() {
+  if (!aocEditing || !confirm('Delete this AOC?')) return;
+  store('hoppsAocs', getAocs().filter(a => a.id !== aocEditing));
+  backFromAoc();
+}
+function backFromAoc() {
+  if (aocReturn === 'dayEditor' && editingDay) { const k = editingDay; openDay(k, 'work'); }
+  else showScreen(aocReturn || 'aocs');
+}
+function renderAocList() {
+  const q = document.getElementById('aocSearch').value.trim().toLowerCase();
+  const fe = document.getElementById('aocFEquip').value, fs = document.getElementById('aocFStatus').value, fv = document.getElementById('aocFSev').value;
+  const list = aocSort(getAocs()).filter(a => {
+    if (fe !== 'all' && a.equipment !== fe) return false;
+    if (fs === 'active' && a.status === 'Resolved') return false;
+    if (fs !== 'all' && fs !== 'active' && a.status !== fs) return false;
+    if (fv !== 'all' && a.severity !== fv) return false;
+    if (!q) return true;
+    return [a.title, a.probable, a.actual, a.actions, aocEquip(a), a.status, a.severity, a.date, niceDate(a.date), (a.tags || []).join(' ')].join(' ').toLowerCase().includes(q);
+  });
+  const open = getAocs().filter(a => a.status !== 'Resolved').length;
+  document.getElementById('aocCount').textContent = `${list.length} shown · ${open} open/monitoring`;
+  document.getElementById('aocList').innerHTML = list.length ? list.map(aocCard).join('') : '<p class="muted">No AOCs match.</p>';
+}
+function nwhCardsHtml() {
+  const today = ymd(new Date());
+  const open = aocSort(getAocs().filter(a => a.status !== 'Resolved'));
+  return {
+    checklist: `<div class="cl-title"><b>Today · ${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</b>
+      <button class="small secondary" onclick="showScreen('readings')">📈 Readings</button></div>` + checklistHtml(today),
+    aocs: `<h3>⚠️ Abnormal Operating Conditions (AOCs)</h3>
+      ${open.length ? open.slice(0, 4).map(aocCard).join('') : '<p class="muted">No open AOCs.</p>'}
+      <div class="btn-row"><button class="small danger" onclick="openAoc(null, null, 'calendar')">＋ New AOC</button>
+      <button class="small secondary" onclick="showScreen('aocs')">All AOCs${open.length > 4 ? ` (${open.length} open)` : ''}</button></div>`
+  };
+}
+function dayAocHtml(day) {
+  const list = aocSort(getAocs().filter(a => a.date === day));
+  return `<h3>⚠️ Abnormal Operating Conditions (AOCs)</h3>${list.map(aocCard).join('') || '<p class="muted">None logged this day.</p>'}
+    <button class="small danger" style="width:100%" onclick="openAoc(null,'${day}','dayEditor')">＋ Add AOC for this day</button>`;
+}
+
 /* ---------- Notes (searchable across modes) ---------- */
 let noteMode = 'all', noteTag = '';
 function setNoteMode(m) { noteMode = m; renderNotes(); }
@@ -1966,13 +2350,25 @@ function noteItems(mode, includeAll) {
   if (mode === 'all' || mode === 'work') Object.entries(getWork()).forEach(([k, w]) => {
     const c = calc[k] || {};
     const b = w.boiler || {};
-    const boiler = [['Pressure', b.pressure && b.pressure + ' psi'], ['Water', b.water], ['Fuel', b.fuel], ['Blowdowns', b.blowdowns], ['Chem', b.chem], ['Incident/maint', b.incidents]].filter(x => x[1]).map(x => x.join(': '));
+    const boiler = [['Pressure', b.pressure && b.pressure + ' psi'], ['Water', b.water], ['Fuel', b.fuel], ['Incident/maint', b.incidents]].filter(x => x[1]).map(x => x.join(': '));
+    const clItems = getChecklist();
+    const cl = Object.entries(w.checklist || {}).map(([id, r]) => {
+      const it = clItems.find(i => i.id === id); if (!it) return '';
+      const vals = it.fields.filter(f => r.values && r.values[f.key] != null).map(f => `${f.label} ${r.values[f.key]}${f.unit ? ' ' + f.unit : ''}`).join(', ');
+      return (vals || r.note) ? `${it.label}: ${[vals, r.note].filter(Boolean).join(' — ')}` : '';
+    }).filter(Boolean);
     const head = PAID_TYPES.includes(w.dayType) || w.dayType === 'Off' ? w.dayType : (w.worked ? `${w.shift === 'Custom' ? (w.shiftName || 'Custom') : (w.shift || '')} shift${c.hours ? ' · ' + c.hours + ' h' : ''}${c.ot ? ' · OT ' + c.ot : ''}${w.dayType === 'OT' ? ' (OT day)' : ''}` : '');
-    const text = [w.notes, ...boiler].filter(x => x && String(x).trim()).join('\n');
+    const text = [w.notes, ...boiler, ...(includeAll ? [] : cl.filter(x => /—/.test(x)))].filter(x => x && String(x).trim()).join('\n');
+    w._search = cl.join(' ');
     if (!includeAll && !text) return;
     if (!head && !text && !w.pinned) return;
-    items.push({ mode: 'work', day: k, head, text, tags: w.tags || [], pinned: !!w.pinned, ex: w.isExample });
+    items.push({ mode: 'work', day: k, head, text, tags: w.tags || [], pinned: !!w.pinned, ex: w.isExample, search: w._search });
   });
+  if (mode === 'all' || mode === 'work') getAocs().forEach(a => items.push({
+    mode: 'work', day: a.date, key: 'aoc:' + a.id, aoc: a.id, pinned: false, ex: a.isExample, tags: a.tags || [],
+    head: `⚠️ AOC · ${a.title} (${a.severity}, ${a.status})`,
+    text: [aocEquip(a), a.probable && 'Probable: ' + a.probable, a.actual && 'Actual: ' + a.actual, a.actions && 'Actions: ' + a.actions].filter(Boolean).join('\n')
+  }));
   if (mode === 'all' || mode === 'side') Object.entries(getLog()).forEach(([k, e]) => {
     const invs = Object.entries(e.invoices || {}).map(([id, t]) => `🧾 ${id} — ${t}`);
     const text = [e.notes, ...(includeAll ? invs : [])].filter(x => x && String(x).trim()).join('\n');
@@ -1991,7 +2387,7 @@ function noteItems(mode, includeAll) {
 }
 function noteHtml(n) {
   const col = { work: 'var(--orange)', side: 'var(--olive)', personal: '#8e44ad' }[n.mode];
-  return `<div class="log-entry note-item" onclick="openDay('${n.day}','${n.mode}')">
+  return `<div class="log-entry note-item" onclick="${n.aoc ? `openAoc('${n.aoc}')` : `openDay('${n.day}','${n.mode}')`}">
     <div><b>${n.pinned ? '📌 ' : ''}${niceDate(n.day)}</b> <span class="badge" style="background:${col}">${MODES[n.mode]}</span>${n.ex ? ' <span class="badge ex">EXAMPLE</span>' : ''}</div>
     ${n.head ? `<div>${esc(n.head)}</div>` : ''}
     ${n.text ? `<div class="muted" style="white-space:pre-line">${esc(n.text)}</div>` : ''}
@@ -2001,12 +2397,12 @@ function noteHtml(n) {
 function renderNotes() {
   segActive('noteSeg', 'nm', noteMode);
   const q = document.getElementById('noteSearch').value.trim().toLowerCase();
-  let items = noteItems(noteMode, false).concat(noteItems(noteMode, true).filter(n => n.pinned || n.tags.length)).filter((n, i, a) => a.findIndex(x => x.mode === n.mode && x.day === n.day) === i);
+  let items = noteItems(noteMode, false).concat(noteItems(noteMode, true).filter(n => n.pinned || n.tags.length)).filter((n, i, a) => a.findIndex(x => (x.key || x.mode + x.day) === (n.key || n.mode + n.day)) === i);
   const allTags = [...new Set(items.flatMap(n => n.tags))].sort();
   if (noteTag && !allTags.includes(noteTag)) noteTag = '';
   document.getElementById('tagChips').innerHTML = allTags.map(t => `<button class="chip${t === noteTag ? ' on' : ''}" onclick="noteTag=noteTag==='${t}'?'':'${t}';renderNotes()">#${esc(t)}</button>`).join('');
   if (noteTag) items = items.filter(n => n.tags.includes(noteTag));
-  if (q) items = items.filter(n => [n.head, n.text, n.tags.join(' '), n.day, niceDate(n.day), MODES[n.mode]].join(' ').toLowerCase().includes(q));
+  if (q) items = items.filter(n => [n.head, n.text, n.search || '', n.tags.join(' '), n.day, niceDate(n.day), MODES[n.mode]].join(' ').toLowerCase().includes(q));
   items.sort((a, b) => (b.pinned - a.pinned) || b.day.localeCompare(a.day));
   document.getElementById('noteList').innerHTML = items.length ? `<div class="card">${items.map(noteHtml).join('')}</div>` : '<p class="muted">No notes found. Add notes from any day on the calendar.</p>';
 }
@@ -2091,7 +2487,7 @@ function renderDashboard() {
 
 /* ---------- Backup ---------- */
 function exportBackup() {
-  const data = { app: 'hopps-invoices', version: 4, exported: new Date().toISOString(), data: {} };
+  const data = { app: 'hopps-invoices', version: 5, exported: new Date().toISOString(), data: {} };
   KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) { try { data.data[k] = JSON.parse(v); } catch (e) { data.data[k] = v; } } });
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
@@ -2343,7 +2739,7 @@ function jobToInvoice() {
 /* ---------- Example data ---------- */
 const isEx = r => r && r.isExample;
 function hasExamples() {
-  return getInvoices().some(isEx) || getQuotes().some(isEx) || getJobs().some(isEx) ||
+  return getInvoices().some(isEx) || getQuotes().some(isEx) || getJobs().some(isEx) || getAocs().some(isEx) ||
     Object.values(getWork()).some(isEx) || Object.values(getPersonal()).some(isEx);
 }
 function updateExampleUI() {
@@ -2392,15 +2788,26 @@ function loadExamples() {
     .forEach(([k, side, job, notes, tags]) => { const key = d(k); if (!log[key]) log[key] = { isExample: true, side, job, notes, tags }; });
   store('hoppsLog', log);
   invoices.forEach(logInvoice);
-  // Work (day job) examples: recent shifts incl. overtime, PTO and a night shift, with boiler logs
+  // Work (day job) examples: recent shifts incl. overtime, PTO and a night shift, with boiler logs and checklists
   const W = getWork();
+  const exAt = new Date(); exAt.setHours(9, 0, 0, 0);
+  const exCl = (done, values, notes) => Object.fromEntries(done.map(id => [id, Object.assign({ done: true, at: exAt.toISOString() }, values[id] ? { values: values[id] } : {}, (notes || {})[id] ? { note: notes[id] } : {})]));
+  const aocs = getAocs();
+  aocs.push(
+    { id: 'EX-AOC1', isExample: true, created: new Date().toISOString(), date: d(-1), time: '13:40', equipment: 'Other', equipOther: 'Feedwater pump #2', title: 'Feedwater pump #2 seal leak (example)', probable: 'Worn mechanical seal', actual: 'Seal leaking ~1 gal/hr; shaft sleeve scored', severity: 'High', actions: 'Switched to pump #1, wrote work order', status: 'Open', resolved: '', tags: ['pump'] },
+    { id: 'EX-AOC2', isExample: true, created: new Date().toISOString(), date: d(-1), time: '09:10', equipment: 'Boiler 2', equipOther: '', title: 'High conductivity (example)', probable: 'Blowdown interval too long', actual: 'Conductivity 3720 µS/cm; continuous blowdown valve partly closed', severity: 'Med', actions: 'Opened CBD valve, extra bottom blowdown, retest next shift', status: 'Monitoring', resolved: '', tags: ['chemistry'] },
+    { id: 'EX-AOC3', isExample: true, created: new Date().toISOString(), date: d(-6), time: '07:25', equipment: 'Boiler 1', equipOther: '', title: 'Low drum level alarm (example)', probable: 'Level transmitter drift', actual: 'Feedwater valve sticking; cleaned and stroked valve', severity: 'Med', actions: 'Manual level control 20 min, maintenance freed valve', status: 'Resolved', resolved: d(-5), tags: ['level'] }
+  );
+  store('hoppsAocs', aocs);
   const shift = (start, end, extra) => Object.assign({ isExample: true, worked: true, dayType: 'Regular', shift: 'Day', start, end }, extra || {});
   const workEx = {
-    [d(-1)]: shift('06:00', '16:30', { notes: 'Example: stayed late, #2 boiler feedwater pump acting up.', tags: ['pump'], boiler: { pressure: '128', water: 'Gauge glass OK 7am / 11am / 3pm', fuel: 'Hog fuel ~20 tons', blowdowns: '2 bottom', chem: 'pH 11.1, sulfite 35 ppm', incidents: 'Feedwater pump #2 seal leaking, wrote work order' } }),
-    [d(-2)]: shift('06:00', '14:00', { boiler: { pressure: '125', water: 'Low-water cutoff tested OK', blowdowns: '2 bottom, 1 surface' } }),
-    [d(-3)]: shift('06:00', '14:00'),
+    [d(-1)]: shift('06:00', '16:30', { notes: 'Example: stayed late, #2 boiler feedwater pump acting up.', tags: ['pump'], boiler: { pressure: '128', water: 'Gauge glass OK 7am / 11am / 3pm', fuel: 'Hog fuel ~20 tons', incidents: 'Feedwater pump #2 seal leaking, wrote work order' },
+      checklist: exCl(['meter', 'b1sys', 'b2sys', 'b1chem', 'b2chem', 'overall', 'blowdown'], { meter: { reading: 48213 }, b1chem: { sulfite: 34, ph: 11.1, cond: 2850 }, b2chem: { sulfite: 22, ph: 10.9, cond: 3720 }, blowdown: { time: '10:30' } }, { b2chem: 'Example: conductivity high, increased blowdown' }) }),
+    [d(-2)]: shift('06:00', '14:00', { boiler: { pressure: '125', water: 'Low-water cutoff tested OK' },
+      checklist: exCl(['meter', 'b1sys', 'b2sys', 'b1chem'], { meter: { reading: 48107 }, b1chem: { sulfite: 38, ph: 11.2, cond: 2700 } }) }),
+    [d(-3)]: shift('06:00', '14:00', { checklist: exCl(['meter', 'b1sys', 'b2sys', 'b1chem', 'b2chem', 'overall', 'blowdown'], { meter: { reading: 47990 }, b1chem: { sulfite: 31, ph: 11.0, cond: 2900 }, b2chem: { sulfite: 30, ph: 11.0, cond: 3050 }, blowdown: { time: '11:00' } }) }),
     [d(-4)]: shift('06:00', '15:00', { notes: 'Example: safety meeting at shift change.', tags: ['safety'] }),
-    [d(-5)]: shift('06:00', '14:00', { boiler: { pressure: '124', fuel: 'Sawdust + hog fuel', chem: 'TDS 2600' } }),
+    [d(-5)]: shift('06:00', '14:00', { boiler: { pressure: '124', fuel: 'Sawdust + hog fuel' } }),
     [d(-8)]: { isExample: true, worked: false, dayType: 'PTO', shift: 'Day', notes: 'Example: PTO day for appointments.' },
     [d(-9)]: shift('22:00', '06:00', { shift: 'Night', notes: 'Example: covered night shift for a coworker.', pinned: true, tags: ['coverage'] }),
     [d(-10)]: shift('06:00', '14:00', { dayType: 'OT', notes: 'Example: Saturday call-in, all hours OT.' })
@@ -2449,6 +2856,7 @@ function removeExamples() {
   store('hoppsLog', log);
   const W = getWork(); Object.keys(W).forEach(k => { if (W[k].isExample) delete W[k]; }); store('hoppsWork', W);
   const P = getPersonal(); Object.keys(P).forEach(k => { if (P[k].isExample) delete P[k]; }); store('hoppsPersonal', P);
+  store('hoppsAocs', getAocs().filter(a => !a.isExample));
   toast('Example data removed');
   showScreen('calendar');
 }

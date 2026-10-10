@@ -38,3 +38,8 @@ Edit the profile first to put your real info in.
 ## Version 4.1
 - New NWH tab (Northwest Hardwoods): opens the Work calendar on today with Clock in/out and the pay-period summary at the top. Change the tab's short name in More, next to the employer.
 - Quick add is now the "+ Add" button next to Today. The header shows a short "Hopps" title.
+
+## Version 4.2
+- AOCs (Abnormal Operating Conditions): log date/time, equipment (Boiler 1, Boiler 2, Both, Other), title, Probable vs Actual, severity, actions, status and resolved date, plus tags. Open the full searchable list from the NWH tab. AOCs show as a diamond marker on the calendar (red = high and still open).
+- Daily checklist on the NWH tab and in each work day: meter reading, boiler systems checks, chemical tests per boiler (sulfite, pH, conductivity), overall check, blowdown time. Ticking an item records the time. Edit items, units and normal ranges in More; "Readings history" compares recent values and shows out-of-range ones in red.
+- Chemical-test and blowdown notes from the old boiler log were moved into the checklist automatically.
