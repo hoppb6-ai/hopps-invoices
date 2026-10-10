@@ -2,21 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#FF6600">
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Hopps Invoices</title>
 <style>
 :root {
   --orange: #FF6600;
+  --orange-dark: #E05500;
   --cream: #FFF8F0;
   --olive: #6B8E23;
   --charcoal: #333;
+  --blue: #3A5A80;
   --light: #F5F0E8;
 }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -24,43 +27,129 @@ body {
   color: var(--charcoal);
   min-height: 100vh;
 }
-.screen { display: none; padding: 16px; max-width: 480px; margin: 0 auto; }
-.screen.active { display: block; }
+/* Header */
+#appHeader {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--orange); color: white;
+  padding: calc(env(safe-area-inset-top) + 10px) 12px 10px;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+body.locked #appHeader { display: none; }
+#bizNameHeader { flex: 1; font-size: 18px; font-weight: 800; margin: 0; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#appHeader button { width: auto; margin: 0; padding: 8px 12px; background: rgba(255,255,255,.2); font-size: 15px; min-height: 40px; }
+
+.screen { display: none; padding: 16px 16px 40px; max-width: 480px; margin: 0 auto; }
+.screen.active { display: block; animation: fadeIn .22s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 h1, h2 { margin: 0 0 12px; color: var(--orange); }
+h3 { margin: 4px 0 8px; }
 button, .btn {
   background: var(--orange);
   color: white;
   border: none;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
   width: 100%;
   margin: 6px 0;
+  min-height: 48px;
   cursor: pointer;
+  transition: transform .08s, filter .15s;
 }
+button:active { transform: scale(.97); filter: brightness(.92); }
 button.secondary { background: #555; }
 button.danger { background: #c0392b; }
+button.olive { background: var(--olive); }
+button.small { width: auto; min-height: 36px; padding: 6px 12px; font-size: 15px; margin: 2px; }
 input, select, textarea {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   margin: 6px 0;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 16px;
   background: white;
+  font-family: inherit;
 }
-.pin-box { text-align: center; padding-top: 40vh; }
-.pin-box input { font-size: 24px; letter-spacing: 8px; text-align: center; max-width: 200px; }
-.item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
-.item-row button { width: auto; padding: 6px 10px; margin: 0; }
-.catalogue-item { background: white; margin: 6px 0; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+label { font-size: 14px; font-weight: 600; color: #555; display: block; margin-top: 8px; }
+.pin-box { text-align: center; padding-top: 30vh; }
+.pin-box h1 { font-size: 34px; }
+.pin-box input { font-size: 28px; letter-spacing: 10px; text-align: center; max-width: 220px; }
+.pin-box button { max-width: 220px; }
+.item-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #eee; }
+.item-row .nm { flex: 1; }
+.item-row button { width: auto; padding: 6px 10px; margin: 0; min-height: 36px; }
+.qty { display: flex; align-items: center; gap: 4px; }
+.qty button { background: var(--light); color: var(--charcoal); min-width: 36px; }
+.catalogue-item { background: white; margin: 6px 0; padding: 10px 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.catalogue-item button { width: auto; margin: 0; min-height: 40px; }
 .total-bar { background: var(--orange); color: white; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 6px; text-align: right; margin-top: 12px; }
 .green { color: var(--olive); }
-.section { background: white; padding: 12px; border-radius: 8px; margin: 10px 0; }
+.section, .card { background: white; padding: 14px; border-radius: 14px; margin: 12px 0; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.muted { color: #888; font-size: 13px; }
+.err { color: #c0392b; font-weight: 600; display: none; }
+.toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: var(--charcoal); color: white; padding: 12px 20px; border-radius: 24px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50; }
+.toast.show { opacity: .95; }
+
+/* Menu tiles */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tile { background: white; color: var(--charcoal); border-radius: 16px; padding: 18px 12px; min-height: 100px; box-shadow: 0 2px 8px rgba(0,0,0,.08); text-align: left; margin: 0; }
+.tile b { display: block; font-size: 17px; margin-top: 6px; }
+.tile .ic { font-size: 28px; }
+.tile.primary { background: var(--orange); color: white; grid-column: span 2; min-height: 80px; }
+.stats-row { display: flex; gap: 10px; }
+.stat { flex: 1; background: white; border-radius: 14px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.stat .v { font-size: 20px; font-weight: 800; color: var(--orange); }
+.stat .l { font-size: 12px; color: #777; }
+
+/* Calendar */
+.cal-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-head button { width: 48px; }
+.cal-head h3 { margin: 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
+.cal-dow { text-align: center; font-size: 12px; color: #888; font-weight: 600; }
+.cal-day { background: white; border-radius: 10px; min-height: 48px; padding: 4px; text-align: center; font-size: 15px; cursor: pointer; border: 2px solid transparent; }
+.cal-day.empty { background: transparent; cursor: default; }
+.cal-day.today { border-color: var(--orange); font-weight: 800; color: var(--orange); }
+.dots { display: flex; justify-content: center; gap: 3px; margin-top: 4px; min-height: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.work { background: var(--orange); }
+.dot.side { background: var(--olive); }
+.dot.note { background: var(--blue); }
+.legend { font-size: 13px; color: #555; display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.log-entry { border-bottom: 1px solid #eee; padding: 10px 0; }
+.log-entry:last-child { border-bottom: none; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 17px; padding: 10px 0; }
+.check input { width: 26px; height: 26px; margin: 0; }
+
+/* History */
+.badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; color: white; }
+.badge.paid { background: var(--olive); }
+.badge.unpaid { background: #c0392b; }
+.inv-card .top { display: flex; justify-content: space-between; align-items: baseline; }
+.inv-card .amt { font-size: 18px; font-weight: 800; color: var(--orange); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.btn-row button { flex: 1 1 30%; }
+
+/* Dashboard chart */
+.chart { display: flex; align-items: flex-end; gap: 4px; height: 140px; padding-top: 10px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.bar { width: 100%; background: var(--orange); border-radius: 4px 4px 0 0; min-height: 2px; }
+.bar-lbl { font-size: 10px; color: #777; margin-top: 4px; }
+.hbar { height: 10px; background: var(--olive); border-radius: 5px; margin: 4px 0 10px; }
+
 canvas { display: none; }
 </style>
 </head>
-<body>
+<body class="locked">
+
+<header id="appHeader">
+  <h1 id="bizNameHeader">Hopps Handyman Services</h1>
+  <button onclick="showScreen('menu')" aria-label="Home">⌂ Home</button>
+  <button onclick="lockApp()" aria-label="Lock">🔒</button>
+</header>
 
 <!-- PIN Screen -->
 <div id="pinScreen" class="screen active">
@@ -74,31 +163,50 @@ canvas { display: none; }
 
 <!-- Main Menu -->
 <div id="menu" class="screen">
-  <h1 id="bizNameHeader">Hopps Handyman Services</h1>
-  <button onclick="showScreen('newInvoice')">New Invoice</button>
-  <button onclick="showScreen('profile')" class="secondary">Edit Profile</button>
-  <button onclick="lockApp()" class="danger">Lock</button>
+  <div class="stats-row" id="menuStats"></div>
+  <div class="tiles" style="margin-top:12px">
+    <button class="tile primary" onclick="startNewInvoice()"><span class="ic">＋</span><b>New Invoice</b></button>
+    <button class="tile" onclick="showScreen('history')"><span class="ic">🧾</span><b>Invoices</b><span class="muted">History &amp; paid status</span></button>
+    <button class="tile" onclick="showScreen('calendar')"><span class="ic">📅</span><b>Log &amp; Calendar</b><span class="muted">Work days &amp; journal</span></button>
+    <button class="tile" onclick="showScreen('dashboard')"><span class="ic">📊</span><b>Earnings</b><span class="muted">Totals &amp; chart</span></button>
+    <button class="tile" onclick="showScreen('customers')"><span class="ic">👥</span><b>Customers</b><span class="muted">Address book</span></button>
+    <button class="tile" onclick="showScreen('catalogEditor')"><span class="ic">🛠️</span><b>Catalogue</b><span class="muted">Edit prices</span></button>
+    <button class="tile" onclick="showScreen('profile')"><span class="ic">🏷️</span><b>Edit Profile</b><span class="muted">PIN-protected</span></button>
+    <button class="tile" onclick="showScreen('backup')"><span class="ic">💾</span><b>Backup</b><span class="muted">Export / import</span></button>
+  </div>
+  <button onclick="lockApp()" class="danger" style="margin-top:16px">Lock</button>
 </div>
 
 <!-- Profile -->
 <div id="profile" class="screen">
   <h2>Business Profile</h2>
-  <label>Business Name</label>
-  <input id="pName" type="text">
-  <label>Tagline</label>
-  <input id="pTagline" type="text">
-  <label>Address</label>
-  <textarea id="pAddress" rows="2"></textarea>
-  <label>Phone</label>
-  <input id="pPhone" type="text">
-  <label>Email</label>
-  <input id="pEmail" type="text">
-  <label>Website</label>
-  <input id="pWeb" type="text">
-  <label>Default Transportation Fee</label>
-  <input id="pTransport" type="number" step="0.01">
-  <label>Default Maintenance Fee</label>
-  <input id="pMaint" type="number" step="0.01">
+  <div class="card">
+    <label>Business Name</label>
+    <input id="pName" type="text">
+    <label>Tagline</label>
+    <input id="pTagline" type="text">
+    <label>Address</label>
+    <textarea id="pAddress" rows="3"></textarea>
+    <label>Phone</label>
+    <input id="pPhone" type="text">
+    <label>Email</label>
+    <input id="pEmail" type="text">
+    <label>Website</label>
+    <input id="pWeb" type="text">
+    <label>Default Transportation Fee</label>
+    <input id="pTransport" type="number" step="0.01">
+    <label>Default Maintenance Fee</label>
+    <input id="pMaint" type="number" step="0.01">
+  </div>
+  <div class="card" id="profileLock" style="border:2px solid var(--orange)">
+    <h3>🔒 Confirm changes</h3>
+    <p class="muted">Saving the profile needs your PIN <b>and</b> typing SAVE.</p>
+    <label>PIN</label>
+    <input id="pLockPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="PIN">
+    <label>Type SAVE to confirm</label>
+    <input id="pLockConfirm" type="text" autocapitalize="characters" autocomplete="off" placeholder="SAVE">
+    <p id="profileLockError" class="err"></p>
+  </div>
   <button onclick="saveProfile()">Save Profile</button>
   <button onclick="showScreen('menu')" class="secondary">Back</button>
 </div>
@@ -117,6 +225,15 @@ canvas { display: none; }
 <!-- Builder -->
 <div id="builder" class="screen">
   <h2 id="catTitle">Builder</h2>
+  <p class="muted" id="builderInvNum"></p>
+  <div class="section">
+    <h3>Customer</h3>
+    <label>Customer name (optional)</label>
+    <input id="invCustomer" list="custList" placeholder="Bill to" oninput="autofillCustomer()">
+    <datalist id="custList"></datalist>
+    <label>Job address (optional)</label>
+    <textarea id="invJobAddress" rows="2" placeholder="Where the work was done"></textarea>
+  </div>
   <div id="catalogueList"></div>
   <div class="section">
     <h3>Custom Line</h3>
@@ -132,6 +249,8 @@ canvas { display: none; }
   <input id="invTransport" type="number" step="0.01">
   <label>Maintenance Fee</label>
   <input id="invMaint" type="number" step="0.01">
+  <label>Private notes (file copy only, never on customer copy)</label>
+  <textarea id="invNotes" rows="3" placeholder="Parts used, gate code, follow-ups..."></textarea>
   <button onclick="previewInvoice()">Preview Invoice</button>
   <button onclick="showScreen('newInvoice')" class="secondary">Back</button>
 </div>
@@ -140,15 +259,139 @@ canvas { display: none; }
 <div id="previewScreen" class="screen">
   <h2>Invoice Preview</h2>
   <div id="invoicePreview" class="section"></div>
-  <button onclick="exportPNG()">Download PNG</button>
+  <button onclick="exportPNG()">Customer Copy PNG</button>
+  <button onclick="exportPNG(true)" class="olive">My File Copy PNG</button>
+  <button onclick="togglePaid(currentInvoice.id); previewInvoice(true)" class="secondary" id="previewPaidBtn">Mark Paid</button>
   <button onclick="showScreen('builder')" class="secondary">Back to Edit</button>
   <button onclick="showScreen('menu')" class="secondary">Done</button>
 </div>
 
+<!-- Calendar & Log -->
+<div id="calendar" class="screen">
+  <h2>Log &amp; Calendar</h2>
+  <div class="card">
+    <div class="cal-head">
+      <button class="small" onclick="calMove(-1)" aria-label="Previous month">‹</button>
+      <h3 id="calTitle"></h3>
+      <button class="small" onclick="calMove(1)" aria-label="Next month">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="legend">
+      <span><i class="dot work"></i> Day job</span>
+      <span><i class="dot side"></i> Side project</span>
+      <span><i class="dot note"></i> Journal note</span>
+    </div>
+  </div>
+  <div class="stats-row" id="monthSummary"></div>
+  <div class="card">
+    <h3>Progress log</h3>
+    <div id="logList"></div>
+  </div>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Day editor -->
+<div id="dayEditor" class="screen">
+  <h2 id="dayTitle">Day</h2>
+  <div class="card">
+    <label class="check"><input type="checkbox" id="dWork"> Went to work</label>
+    <label class="check"><input type="checkbox" id="dSide"> Side project</label>
+    <label>Job / project name</label>
+    <input id="dJob" type="text" placeholder="e.g. Smith deck repair">
+    <label>Notes / journal</label>
+    <textarea id="dNotes" rows="6" placeholder="How did it go?"></textarea>
+    <div id="dInvoices" class="muted"></div>
+  </div>
+  <button onclick="saveDay()">Save Day</button>
+  <button onclick="clearDay()" class="danger">Clear Day</button>
+  <button onclick="showScreen('calendar')" class="secondary">Back</button>
+</div>
+
+<!-- Invoice history -->
+<div id="history" class="screen">
+  <h2>Invoices</h2>
+  <input id="histSearch" type="search" placeholder="Search number, customer, work type, item..." oninput="renderHistory()">
+  <select id="histFilter" onchange="renderHistory()">
+    <option value="all">All</option>
+    <option value="unpaid">Unpaid only</option>
+    <option value="paid">Paid only</option>
+  </select>
+  <div id="histList"></div>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" class="screen">
+  <h2>Earnings</h2>
+  <div class="stats-row" id="dashStats"></div>
+  <div class="stats-row" id="dashStats2" style="margin-top:10px"></div>
+  <div class="card">
+    <h3>Last 12 months</h3>
+    <div class="chart" id="dashChart"></div>
+  </div>
+  <div class="card">
+    <h3>Top work types</h3>
+    <div id="dashTop"></div>
+  </div>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Customers -->
+<div id="customers" class="screen">
+  <h2>Customers</h2>
+  <div class="card">
+    <label>Name</label>
+    <input id="cName" type="text">
+    <label>Address</label>
+    <textarea id="cAddress" rows="2"></textarea>
+    <button onclick="addCustomerManual()">Save Customer</button>
+  </div>
+  <div id="custListView"></div>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Catalogue editor -->
+<div id="catalogEditor" class="screen">
+  <h2>Catalogue</h2>
+  <select id="ceCat" onchange="renderCatalogEditor()">
+    <option>Home Repairs</option><option>Small Engine</option><option>Plumbing</option><option>Electrical</option><option>General</option>
+  </select>
+  <div id="ceList"></div>
+  <div class="card">
+    <h3>Add item</h3>
+    <input id="ceNewName" placeholder="Item name">
+    <input id="ceNewPrice" type="number" step="0.01" placeholder="Price">
+    <button onclick="ceAdd()">Add to catalogue</button>
+  </div>
+  <button onclick="ceSave()">Save Changes</button>
+  <button onclick="ceReset()" class="danger">Reset this category to defaults</button>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Backup -->
+<div id="backup" class="screen">
+  <h2>Backup</h2>
+  <div class="card">
+    <h3>Export</h3>
+    <p class="muted">Downloads one JSON file with your profile, invoices, customers, catalogue and log. Keep it in Files / iCloud so you can move to a new phone.</p>
+    <button onclick="exportBackup()">Download Backup</button>
+  </div>
+  <div class="card">
+    <h3>Import</h3>
+    <p class="muted">Replaces all data on this device with the backup file.</p>
+    <input id="backupFile" type="file" accept=".json,application/json">
+    <button onclick="importBackup()" class="danger">Restore from File</button>
+    <p id="backupMsg" class="muted"></p>
+  </div>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<div id="toast" class="toast"></div>
 <canvas id="invoiceCanvas" width="800" height="1100"></canvas>
 
 <script>
 const PIN = '5295';
+const AUTO_LOCK_MS = 5 * 60 * 1000;
 let profile = {
   name: 'Hopps Handyman Services',
   tagline: 'Reliable repairs, done right',
@@ -162,8 +405,10 @@ let profile = {
 let currentCategory = '';
 let invoiceItems = [];
 let currentInvoice = {};
+let editingId = null;      // invoice number being edited (null = new, assigned on first preview)
+let editingDate = null;    // original date of a reopened invoice
 
-const catalogue = {
+const defaultCatalogue = {
   'Home Repairs': [
     { name: 'Toilet repair', price: 150 },
     { name: 'Faucet repair', price: 80 },
@@ -196,13 +441,58 @@ const catalogue = {
     { name: 'Seasonal maintenance', price: 100 }
   ]
 };
+let catalogue = JSON.parse(JSON.stringify(defaultCatalogue));
 
+/* ---------- Storage helpers (localStorage only) ---------- */
+const KEYS = ['hoppsProfile', 'hoppsCatalogue', 'hoppsInvoices', 'hoppsNextNum', 'hoppsLog', 'hoppsCustomers'];
+function load(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+}
+function store(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+const getInvoices = () => load('hoppsInvoices', []);
+const getLog = () => load('hoppsLog', {});
+const getCustomers = () => load('hoppsCustomers', []);
+
+/* ---------- Formatting helpers ---------- */
+function money(n) {
+  return '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function ymd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function parseYmd(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function niceDate(s) { return parseYmd(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ---------- Profile ---------- */
 function loadProfile() {
   const saved = localStorage.getItem('hoppsProfile');
   if (saved) profile = JSON.parse(saved);
+  catalogue = load('hoppsCatalogue', JSON.parse(JSON.stringify(defaultCatalogue)));
   document.getElementById('bizNameHeader').textContent = profile.name;
 }
 function saveProfile() {
+  // Dual verification: PIN + typed SAVE are both required.
+  const pin = document.getElementById('pLockPin').value;
+  const confirmText = document.getElementById('pLockConfirm').value.trim();
+  const errEl = document.getElementById('profileLockError');
+  const problems = [];
+  if (pin !== PIN) problems.push('PIN is incorrect');
+  if (confirmText !== 'SAVE') problems.push('type SAVE (capital letters) to confirm');
+  if (problems.length) {
+    errEl.textContent = 'Not saved: ' + problems.join(' and ') + '.';
+    errEl.style.display = 'block';
+    document.getElementById('pLockPin').value = '';
+    return false;
+  }
+  errEl.style.display = 'none';
   profile.name = document.getElementById('pName').value || profile.name;
   profile.tagline = document.getElementById('pTagline').value;
   profile.address = document.getElementById('pAddress').value;
@@ -213,8 +503,9 @@ function saveProfile() {
   profile.maint = parseFloat(document.getElementById('pMaint').value) || 0;
   localStorage.setItem('hoppsProfile', JSON.stringify(profile));
   document.getElementById('bizNameHeader').textContent = profile.name;
-  alert('Profile saved');
+  toast('Profile saved');
   showScreen('menu');
+  return true;
 }
 function fillProfileForm() {
   document.getElementById('pName').value = profile.name;
@@ -225,18 +516,30 @@ function fillProfileForm() {
   document.getElementById('pWeb').value = profile.web || '';
   document.getElementById('pTransport').value = profile.transport || 0;
   document.getElementById('pMaint').value = profile.maint || 0;
+  document.getElementById('pLockPin').value = '';
+  document.getElementById('pLockConfirm').value = '';
+  document.getElementById('profileLockError').style.display = 'none';
 }
 
+/* ---------- Navigation & lock ---------- */
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+  if (id === 'menu') renderMenuStats();
   if (id === 'profile') fillProfileForm();
   if (id === 'builder') renderCatalogue();
+  if (id === 'calendar') renderCalendar();
+  if (id === 'history') renderHistory();
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'customers') renderCustomers();
+  if (id === 'catalogEditor') renderCatalogEditor();
 }
 function checkPin() {
   const val = document.getElementById('pinInput').value;
   if (val === PIN) {
     document.getElementById('pinError').style.display = 'none';
+    document.body.classList.remove('locked');
     loadProfile();
     showScreen('menu');
   } else {
@@ -246,7 +549,31 @@ function checkPin() {
 }
 function lockApp() {
   document.getElementById('pinInput').value = '';
+  document.body.classList.add('locked');
   showScreen('pinScreen');
+}
+// Auto-lock after 5 minutes in the background
+let hiddenAt = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); }
+  else if (hiddenAt && Date.now() - hiddenAt >= AUTO_LOCK_MS) { lockApp(); hiddenAt = null; }
+  else { hiddenAt = null; }
+});
+
+function renderMenuStats() {
+  const invs = getInvoices();
+  const thisMonth = ymd(new Date()).slice(0, 7);
+  const month = invs.filter(i => i.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
+  const unpaid = invs.filter(i => !i.paid).reduce((s, i) => s + i.total, 0);
+  document.getElementById('menuStats').innerHTML =
+    `<div class="stat"><div class="v">${money(month)}</div><div class="l">This month</div></div>
+     <div class="stat"><div class="v" style="color:#c0392b">${money(unpaid)}</div><div class="l">Unpaid</div></div>`;
+}
+
+/* ---------- Invoice builder ---------- */
+function startNewInvoice() {
+  editingId = null; editingDate = null;
+  showScreen('newInvoice');
 }
 function selectCategory(cat) {
   currentCategory = cat;
@@ -254,22 +581,36 @@ function selectCategory(cat) {
   document.getElementById('catTitle').textContent = cat;
   document.getElementById('invTransport').value = profile.transport || 0;
   document.getElementById('invMaint').value = profile.maint || 0;
+  document.getElementById('invCustomer').value = '';
+  document.getElementById('invJobAddress').value = '';
+  document.getElementById('invNotes').value = '';
+  editingId = null; editingDate = null;
   showScreen('builder');
 }
 function renderCatalogue() {
+  document.getElementById('builderInvNum').textContent = editingId ? 'Editing ' + editingId : 'New invoice (number assigned on preview)';
+  const dl = document.getElementById('custList');
+  dl.innerHTML = getCustomers().map(c => `<option value="${esc(c.name)}">`).join('');
   const list = document.getElementById('catalogueList');
   list.innerHTML = '';
   const items = catalogue[currentCategory] || [];
-  items.forEach(item => {
+  items.forEach((item, idx) => {
     const div = document.createElement('div');
     div.className = 'catalogue-item';
-    div.innerHTML = `<span>${item.name} <small>$${item.price}</small></span><button onclick="addItem('${item.name.replace(/'/g,"\\'")}', ${item.price})">Add</button>`;
+    div.innerHTML = `<span>${esc(item.name)} <small>${money(item.price)}</small></span><button onclick="addCatalogueItem(${idx})">Add</button>`;
     list.appendChild(div);
   });
   renderAdded();
 }
+function addCatalogueItem(idx) {
+  const item = (catalogue[currentCategory] || [])[idx];
+  if (item) addItem(item.name, item.price);
+}
 function addItem(name, price) {
-  invoiceItems.push({ name, price: parseFloat(price), qty: 1 });
+  // Same item twice -> bump quantity instead of a duplicate line
+  const existing = invoiceItems.find(it => it.name === name && it.price === parseFloat(price));
+  if (existing) existing.qty++;
+  else invoiceItems.push({ name, price: parseFloat(price), qty: 1 });
   renderAdded();
 }
 function addCustom() {
@@ -283,113 +624,541 @@ function addCustom() {
 }
 function renderAdded() {
   const el = document.getElementById('addedItems');
-  el.innerHTML = '';
+  el.innerHTML = invoiceItems.length ? '' : '<p class="muted">No items yet.</p>';
   invoiceItems.forEach((item, i) => {
     const div = document.createElement('div');
     div.className = 'item-row';
-    div.innerHTML = `<span>${item.name} × ${item.qty} = $${(item.price * item.qty).toFixed(2)}</span>
+    div.innerHTML = `<span class="nm">${esc(item.name)}<br><small>${money(item.price)} × ${item.qty} = <b>${money(item.price * item.qty)}</b></small></span>
+      <span class="qty"><button onclick="changeQty(${i},-1)" aria-label="Less">−</button><b>${item.qty}</b><button onclick="changeQty(${i},1)" aria-label="More">+</button></span>
       <button onclick="removeItem(${i})" class="danger" style="width:auto">X</button>`;
     el.appendChild(div);
   });
+}
+function changeQty(i, d) {
+  invoiceItems[i].qty = Math.max(1, invoiceItems[i].qty + d);
+  renderAdded();
 }
 function removeItem(i) {
   invoiceItems.splice(i, 1);
   renderAdded();
 }
-function previewInvoice() {
-  const transport = parseFloat(document.getElementById('invTransport').value) || 0;
-  const maint = parseFloat(document.getElementById('invMaint').value) || 0;
-  let sub = invoiceItems.reduce((s, it) => s + it.price * it.qty, 0);
-  const total = sub + transport + maint;
-  currentInvoice = { items: [...invoiceItems], transport, maint, total, date: new Date().toLocaleDateString() };
+function autofillCustomer() {
+  const name = document.getElementById('invCustomer').value.trim().toLowerCase();
+  const c = getCustomers().find(c => c.name.toLowerCase() === name);
+  const addr = document.getElementById('invJobAddress');
+  if (c && !addr.value) addr.value = c.address || '';
+}
 
+function nextInvoiceNumber() {
+  const n = load('hoppsNextNum', 1);
+  store('hoppsNextNum', n + 1);
+  return 'HOP-' + String(n).padStart(4, '0');
+}
+function saveCurrentInvoice() {
+  // Upsert into history; preserves paid status
+  const invs = getInvoices();
+  const idx = invs.findIndex(i => i.id === currentInvoice.id);
+  if (idx >= 0) { currentInvoice.paid = invs[idx].paid; invs[idx] = currentInvoice; }
+  else invs.push(currentInvoice);
+  store('hoppsInvoices', invs);
+  // Remember customer in the address book
+  if (currentInvoice.customer) upsertCustomer(currentInvoice.customer, currentInvoice.jobAddress);
+  logInvoice(currentInvoice);
+}
+function previewInvoice(keepPaid) {
+  if (keepPaid !== true) {
+    const transport = parseFloat(document.getElementById('invTransport').value) || 0;
+    const maint = parseFloat(document.getElementById('invMaint').value) || 0;
+    let sub = invoiceItems.reduce((s, it) => s + it.price * it.qty, 0);
+    const total = Math.round((sub + transport + maint) * 100) / 100;
+    if (!editingId) { editingId = nextInvoiceNumber(); editingDate = ymd(new Date()); }
+    currentInvoice = {
+      id: editingId,
+      date: editingDate,
+      category: currentCategory,
+      customer: document.getElementById('invCustomer').value.trim(),
+      jobAddress: document.getElementById('invJobAddress').value.trim(),
+      notes: document.getElementById('invNotes').value.trim(),
+      items: invoiceItems.map(it => ({ ...it })),
+      transport, maint, total, paid: false
+    };
+    saveCurrentInvoice();
+  } else {
+    currentInvoice = getInvoices().find(i => i.id === currentInvoice.id) || currentInvoice;
+  }
+
+  const inv = currentInvoice;
   let html = `<div style="font-family:system-ui; color:#333; background:#FFF8F0; padding:16px;">
-    <div style="font-size:28px; font-weight:bold; color:#FF6600;">${profile.name}</div>
-    <div style="font-size:13px; margin-top:4px;">${profile.address || ''}<br>${profile.phone || ''} · ${profile.email || ''}<br>${profile.web || ''}</div>
+    <div style="font-size:28px; font-weight:bold; color:#FF6600;">${esc(profile.name)}</div>
+    ${profile.tagline ? `<div style="font-style:italic; color:#555;">${esc(profile.tagline)}</div>` : ''}
+    <div style="font-size:13px; margin-top:4px; white-space:pre-line;">${esc(profile.address || '')}</div>
+    <div style="font-size:13px;">${esc(profile.phone || '')} · ${esc(profile.email || '')}<br>${esc(profile.web || '')}</div>
     <hr style="border:1px solid #FF6600; margin:12px 0;">
-    <div class="green" style="color:#6B8E23; font-size:14px;">Thanks for thinking of us</div>
+    <div style="display:flex; justify-content:space-between; font-size:14px;"><b>Invoice ${esc(inv.id)}</b><span>${parseYmd(inv.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>
+    ${inv.customer ? `<div style="font-size:14px; margin-top:6px;"><b>Bill to:</b> ${esc(inv.customer)}</div>` : ''}
+    <div class="green" style="color:#6B8E23; font-size:14px; margin-top:10px;">Thanks for thinking of us</div>
     <h3 style="margin:16px 0 8px;">Work accomplished</h3>`;
-  currentInvoice.items.forEach(it => {
-    html += `<div style="display:flex; justify-content:space-between; margin:4px 0;"><span>${it.name}</span><span>$${(it.price * it.qty).toFixed(2)}</span></div>`;
+  inv.items.forEach(it => {
+    html += `<div style="display:flex; justify-content:space-between; gap:10px; margin:4px 0;"><span>${esc(it.name)}${it.qty > 1 ? ` <small>(×${it.qty} @ ${money(it.price)})</small>` : ''}</span><span>${money(it.price * it.qty)}</span></div>`;
   });
-  if (maint) html += `<div style="display:flex; justify-content:space-between; margin:4px 0; border-top:1px solid #ddd; padding-top:6px;"><span>General maintenance fee</span><span>$${maint.toFixed(2)}</span></div>`;
-  if (transport) html += `<div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Transportation</span><span>$${transport.toFixed(2)}</span></div>`;
-  html += `<div style="background:#FF6600; color:white; padding:10px; margin-top:12px; font-size:20px; font-weight:bold; text-align:right; border-radius:4px;">Total $${total.toFixed(2)}</div>
+  if (inv.maint) html += `<div style="display:flex; justify-content:space-between; margin:4px 0; border-top:1px solid #ddd; padding-top:6px;"><span>General maintenance fee</span><span>${money(inv.maint)}</span></div>`;
+  if (inv.transport) html += `<div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Transportation</span><span>${money(inv.transport)}</span></div>`;
+  html += `<div style="background:#FF6600; color:white; padding:10px; margin-top:12px; font-size:20px; font-weight:bold; text-align:right; border-radius:4px;">Total ${money(inv.total)}</div>
+    ${inv.paid ? '<div style="color:#6B8E23; font-weight:800; text-align:right; margin-top:6px;">PAID — thank you!</div>' : ''}
   </div>`;
+  if (inv.notes || inv.jobAddress) {
+    html += `<div class="muted" style="margin-top:8px;">🔒 Private (file copy only):${inv.jobAddress ? '<br>Job: ' + esc(inv.jobAddress) : ''}${inv.notes ? '<br>Notes: ' + esc(inv.notes) : ''}</div>`;
+  }
   document.getElementById('invoicePreview').innerHTML = html;
+  document.getElementById('previewPaidBtn').textContent = inv.paid ? 'Mark Unpaid' : 'Mark Paid';
   showScreen('previewScreen');
 }
-function exportPNG() {
-  const canvas = document.getElementById('invoiceCanvas');
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  ctx.fillStyle = '#FFF8F0';
-  ctx.fillRect(0, 0, w, h);
 
-  // Header
+/* ---------- PNG rendering ---------- */
+function wrapText(ctx, text, maxW) {
+  const lines = [];
+  String(text || '').split('\n').forEach(para => {
+    let line = '';
+    para.split(/\s+/).filter(Boolean).forEach(word => {
+      // Break single words that are wider than the column
+      while (ctx.measureText(word).width > maxW) {
+        let cut = word.length - 1;
+        while (cut > 1 && ctx.measureText(word.slice(0, cut)).width > maxW) cut--;
+        if (line) { lines.push(line); line = ''; }
+        lines.push(word.slice(0, cut)); word = word.slice(cut);
+      }
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word; }
+      else line = test;
+    });
+    lines.push(line);
+  });
+  return lines;
+}
+// Lays out (and optionally draws) the invoice; returns content height.
+function layoutInvoice(ctx, inv, fileCopy, draw) {
+  const w = 800, L = 40, R = w - 40;
+  const FONT = 'system-ui, -apple-system, sans-serif';
+  const text = (s, x, y, align) => { if (draw) { ctx.textAlign = align || 'left'; ctx.fillText(s, x, y); } };
+  if (draw) { ctx.fillStyle = '#FFF8F0'; ctx.fillRect(0, 0, w, ctx.canvas.height); }
+  let y = 0;
+
+  if (fileCopy) {
+    if (draw) { ctx.fillStyle = '#333'; ctx.fillRect(0, 0, w, 44); }
+    ctx.fillStyle = 'white'; ctx.font = 'bold 20px ' + FONT;
+    text('FILE COPY — INTERNAL RECORD, NOT FOR CUSTOMER', w / 2, 29, 'center');
+    y = 44;
+  }
+
+  // Header: business name shrinks (42 -> 30px) then wraps
+  let size = 42;
+  ctx.font = `bold ${size}px ${FONT}`;
+  while (size > 30 && ctx.measureText(profile.name).width > R - L) { size -= 2; ctx.font = `bold ${size}px ${FONT}`; }
   ctx.fillStyle = '#FF6600';
-  ctx.font = 'bold 42px system-ui, sans-serif';
-  ctx.fillText(profile.name, 40, 70);
+  y += 28;
+  wrapText(ctx, profile.name, R - L).forEach(line => { y += size; text(line, L, y); y += 4; });
 
-  ctx.fillStyle = '#333';
-  ctx.font = '16px system-ui, sans-serif';
-  let y = 100;
-  const addrLines = (profile.address || '').split('\n');
-  addrLines.forEach(line => { ctx.fillText(line, 40, y); y += 22; });
-  if (profile.phone) { ctx.fillText(profile.phone, 40, y); y += 22; }
-  if (profile.email) { ctx.fillText(profile.email, 40, y); y += 22; }
-  if (profile.web) { ctx.fillText(profile.web, 40, y); y += 22; }
+  if (profile.tagline) {
+    ctx.fillStyle = '#555'; ctx.font = `italic 18px ${FONT}`;
+    wrapText(ctx, profile.tagline, R - L).forEach(line => { y += 24; text(line, L, y); });
+  }
+  y += 8;
+  ctx.fillStyle = '#333'; ctx.font = `16px ${FONT}`;
+  const contact = [...(profile.address || '').split('\n'), profile.phone, profile.email, profile.web].filter(s => s && s.trim());
+  contact.forEach(c => wrapText(ctx, c, R - L).forEach(line => { y += 22; text(line, L, y); }));
 
   // Orange line
-  y += 10;
-  ctx.strokeStyle = '#FF6600';
-  ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(w - 40, y); ctx.stroke();
-  y += 30;
+  y += 18;
+  if (draw) { ctx.strokeStyle = '#FF6600'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R, y); ctx.stroke(); }
+  y += 34;
+
+  // Invoice number + date
+  ctx.fillStyle = '#333'; ctx.font = `bold 20px ${FONT}`;
+  text('Invoice ' + inv.id, L, y);
+  ctx.font = `18px ${FONT}`;
+  text(parseYmd(inv.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), R, y, 'right');
+  if (inv.customer) {
+    y += 30;
+    ctx.font = `bold 18px ${FONT}`; text('Bill to:', L, y);
+    ctx.font = `18px ${FONT}`;
+    wrapText(ctx, inv.customer, R - L - 80).forEach((line, i) => { if (i) y += 24; text(line, L + 72, y); });
+  }
+  y += 40;
 
   // Thanks
-  ctx.fillStyle = '#6B8E23';
-  ctx.font = '18px system-ui, sans-serif';
-  ctx.fillText('Thanks for thinking of us', 40, y);
+  ctx.fillStyle = '#6B8E23'; ctx.font = `18px ${FONT}`;
+  text('Thanks for thinking of us', L, y);
   y += 40;
 
   // Work
-  ctx.fillStyle = '#333';
-  ctx.font = 'bold 22px system-ui, sans-serif';
-  ctx.fillText('Work accomplished', 40, y);
+  ctx.fillStyle = '#333'; ctx.font = `bold 22px ${FONT}`;
+  text('Work accomplished', L, y);
   y += 36;
-  ctx.font = '18px system-ui, sans-serif';
-  currentInvoice.items.forEach(it => {
-    ctx.fillText(it.name, 40, y);
-    ctx.fillText('$' + (it.price * it.qty).toFixed(2), w - 140, y);
-    y += 28;
-  });
+  const priceColW = 150, descW = R - L - priceColW - 20;
+  const row = (desc, amount) => {
+    ctx.font = `18px ${FONT}`;
+    const lines = wrapText(ctx, desc, descW);
+    lines.forEach((line, i) => { text(line, L, y + i * 24); });
+    text(money(amount), R, y, 'right');
+    y += (lines.length - 1) * 24 + 30;
+  };
+  inv.items.forEach(it => row(it.name + (it.qty > 1 ? `  (×${it.qty} @ ${money(it.price)})` : ''), it.price * it.qty));
 
-  y += 10;
-  if (currentInvoice.maint) {
-    ctx.fillText('General maintenance fee', 40, y);
-    ctx.fillText('$' + currentInvoice.maint.toFixed(2), w - 140, y);
-    y += 28;
+  if (inv.maint || inv.transport) {
+    if (draw) { ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, y - 18); ctx.lineTo(R, y - 18); ctx.stroke(); }
+    y += 6;
   }
-  if (currentInvoice.transport) {
-    ctx.fillText('Transportation', 40, y);
-    ctx.fillText('$' + currentInvoice.transport.toFixed(2), w - 140, y);
-    y += 28;
-  }
+  if (inv.maint) row('General maintenance fee', inv.maint);
+  if (inv.transport) row('Transportation', inv.transport);
 
   // Total bar
-  y += 20;
-  ctx.fillStyle = '#FF6600';
-  ctx.fillRect(40, y - 28, w - 80, 50);
-  ctx.fillStyle = 'white';
-  ctx.font = 'bold 28px system-ui, sans-serif';
-  ctx.fillText('Total  $' + currentInvoice.total.toFixed(2), w - 280, y + 4);
+  y += 10;
+  if (draw) { ctx.fillStyle = '#FF6600'; ctx.fillRect(L, y, R - L, 56); }
+  ctx.fillStyle = 'white'; ctx.font = `bold 28px ${FONT}`;
+  text('Total  ' + money(inv.total), R - 20, y + 38, 'right');
+  y += 56;
+  if (inv.paid) {
+    y += 34; ctx.fillStyle = '#6B8E23'; ctx.font = `bold 22px ${FONT}`;
+    text('PAID — thank you!', R, y, 'right');
+  }
 
-  // Download
+  // Private section (file copy only)
+  if (fileCopy) {
+    y += 50;
+    ctx.fillStyle = '#333'; ctx.font = `bold 20px ${FONT}`;
+    text('Job details (private)', L, y);
+    if (draw) { ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, y + 10); ctx.lineTo(R, y + 10); ctx.stroke(); }
+    y += 10;
+    const field = (label, val) => {
+      y += 30; ctx.font = `bold 17px ${FONT}`; text(label, L, y);
+      ctx.font = `17px ${FONT}`;
+      wrapText(ctx, val || '—', R - L - 150).forEach((line, i) => { if (i) y += 23; text(line, L + 150, y); });
+    };
+    field('Customer', inv.customer);
+    field('Job address', inv.jobAddress);
+    field('Work type', inv.category);
+    field('Status', inv.paid ? 'Paid' : 'Unpaid');
+    field('Private notes', inv.notes);
+  }
+  return y + 50;
+}
+function drawInvoice(inv, fileCopy) {
+  const canvas = document.getElementById('invoiceCanvas');
+  canvas.width = 800; canvas.height = 4000;
+  const ctx = canvas.getContext('2d');
+  const h = layoutInvoice(ctx, inv, fileCopy, false);
+  canvas.height = Math.max(1035, Math.ceil(h)); // letter proportion minimum, grows with content
+  layoutInvoice(canvas.getContext('2d'), inv, fileCopy, true);
+  return canvas;
+}
+function exportPNG(fileCopy, inv) {
+  inv = inv || currentInvoice;
+  if (!inv || !inv.id) return;
+  if (inv === currentInvoice) saveCurrentInvoice(); // auto-log (idempotent per invoice number)
+  const canvas = drawInvoice(inv, !!fileCopy);
   const link = document.createElement('a');
-  link.download = 'Hopps-Invoice-' + Date.now() + '.png';
+  link.download = 'Hopps-Invoice-' + inv.id + (fileCopy ? '-FILE-COPY' : '-Customer') + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
+}
+
+/* ---------- History ---------- */
+function renderHistory() {
+  const q = document.getElementById('histSearch').value.trim().toLowerCase();
+  const f = document.getElementById('histFilter').value;
+  const invs = getInvoices().slice().sort((a, b) => b.id.localeCompare(a.id));
+  const list = invs.filter(i => {
+    if (f === 'paid' && !i.paid) return false;
+    if (f === 'unpaid' && i.paid) return false;
+    if (!q) return true;
+    const hay = [i.id, i.customer, i.category, i.jobAddress, i.date, ...i.items.map(x => x.name)].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+  document.getElementById('histList').innerHTML = list.length ? list.map(i => `
+    <div class="card inv-card">
+      <div class="top"><b>${esc(i.id)}</b><span class="amt">${money(i.total)}</span></div>
+      <div>${esc(i.customer || 'No customer')} · ${esc(i.category)}</div>
+      <div class="muted">${niceDate(i.date)} · ${i.items.length} item(s) <span class="badge ${i.paid ? 'paid' : 'unpaid'}">${i.paid ? 'PAID' : 'UNPAID'}</span></div>
+      <div class="btn-row">
+        <button class="small" onclick="reopenInvoice('${i.id}')">Open</button>
+        <button class="small secondary" onclick="duplicateInvoice('${i.id}')">Duplicate</button>
+        <button class="small ${i.paid ? 'secondary' : 'olive'}" onclick="togglePaid('${i.id}'); renderHistory()">${i.paid ? 'Mark unpaid' : 'Mark paid'}</button>
+      </div>
+    </div>`).join('') : '<p class="muted">No invoices found.</p>';
+}
+function loadIntoBuilder(inv) {
+  currentCategory = inv.category;
+  invoiceItems = inv.items.map(it => ({ ...it }));
+  document.getElementById('catTitle').textContent = inv.category;
+  document.getElementById('invTransport').value = inv.transport;
+  document.getElementById('invMaint').value = inv.maint;
+  document.getElementById('invCustomer').value = inv.customer || '';
+  document.getElementById('invJobAddress').value = inv.jobAddress || '';
+  document.getElementById('invNotes').value = inv.notes || '';
+}
+function reopenInvoice(id) {
+  const inv = getInvoices().find(i => i.id === id); if (!inv) return;
+  loadIntoBuilder(inv);
+  editingId = inv.id; editingDate = inv.date;
+  currentInvoice = inv;
+  previewInvoice(true);
+}
+function duplicateInvoice(id) {
+  const inv = getInvoices().find(i => i.id === id); if (!inv) return;
+  loadIntoBuilder(inv);
+  editingId = null; editingDate = null;
+  toast('Copied — new number on preview');
+  showScreen('builder');
+}
+function togglePaid(id) {
+  const invs = getInvoices();
+  const inv = invs.find(i => i.id === id); if (!inv) return;
+  inv.paid = !inv.paid;
+  store('hoppsInvoices', invs);
+  if (currentInvoice && currentInvoice.id === id) currentInvoice.paid = inv.paid;
+  toast(inv.id + (inv.paid ? ' marked paid' : ' marked unpaid'));
+}
+
+/* ---------- Customers ---------- */
+function upsertCustomer(name, address) {
+  const list = getCustomers();
+  const c = list.find(c => c.name.toLowerCase() === name.toLowerCase());
+  if (c) { if (address) c.address = address; }
+  else list.push({ name, address: address || '' });
+  list.sort((a, b) => a.name.localeCompare(b.name));
+  store('hoppsCustomers', list);
+}
+function addCustomerManual() {
+  const name = document.getElementById('cName').value.trim();
+  if (!name) return;
+  upsertCustomer(name, document.getElementById('cAddress').value.trim());
+  document.getElementById('cName').value = ''; document.getElementById('cAddress').value = '';
+  renderCustomers(); toast('Customer saved');
+}
+function deleteCustomer(i) {
+  const list = getCustomers();
+  if (!confirm('Delete ' + list[i].name + '?')) return;
+  list.splice(i, 1); store('hoppsCustomers', list); renderCustomers();
+}
+function newInvoiceFor(i) {
+  const c = getCustomers()[i];
+  startNewInvoice();
+  pendingCustomer = c;
+}
+let pendingCustomer = null;
+const _selectCategory = selectCategory;
+selectCategory = function (cat) {
+  _selectCategory(cat);
+  if (pendingCustomer) {
+    document.getElementById('invCustomer').value = pendingCustomer.name;
+    document.getElementById('invJobAddress').value = pendingCustomer.address || '';
+    pendingCustomer = null;
+  }
+};
+function renderCustomers() {
+  const invs = getInvoices();
+  const list = getCustomers();
+  document.getElementById('custListView').innerHTML = list.length ? list.map((c, i) => {
+    const mine = invs.filter(x => (x.customer || '').toLowerCase() === c.name.toLowerCase());
+    const billed = mine.reduce((s, x) => s + x.total, 0);
+    const owed = mine.filter(x => !x.paid).reduce((s, x) => s + x.total, 0);
+    return `<div class="card"><b>${esc(c.name)}</b><div class="muted" style="white-space:pre-line">${esc(c.address || 'No address')}</div>
+      <div class="muted">${mine.length} invoice(s) · ${money(billed)} billed${owed ? ` · <span style="color:#c0392b">${money(owed)} unpaid</span>` : ''}</div>
+      <div class="btn-row"><button class="small" onclick="newInvoiceFor(${i})">New invoice</button><button class="small danger" onclick="deleteCustomer(${i})">Delete</button></div></div>`;
+  }).join('') : '<p class="muted">No customers yet. They are saved automatically when you preview an invoice with a customer name.</p>';
+}
+
+/* ---------- Catalogue editor ---------- */
+let ceDraft = null;
+function renderCatalogEditor() {
+  const cat = document.getElementById('ceCat').value;
+  if (!ceDraft) ceDraft = JSON.parse(JSON.stringify(catalogue));
+  document.getElementById('ceList').innerHTML = (ceDraft[cat] || []).map((it, i) => `
+    <div class="catalogue-item" style="gap:6px">
+      <input value="${esc(it.name)}" onchange="ceDraft['${cat}'][${i}].name=this.value" style="flex:2;margin:0">
+      <input type="number" step="0.01" value="${it.price}" onchange="ceDraft['${cat}'][${i}].price=parseFloat(this.value)||0" style="flex:1;margin:0">
+      <button class="small danger" onclick="ceDraft['${cat}'].splice(${i},1); renderCatalogEditor()">X</button>
+    </div>`).join('');
+}
+function ceAdd() {
+  const cat = document.getElementById('ceCat').value;
+  const name = document.getElementById('ceNewName').value.trim();
+  const price = parseFloat(document.getElementById('ceNewPrice').value);
+  if (!name || isNaN(price)) return;
+  ceDraft[cat].push({ name, price });
+  document.getElementById('ceNewName').value = ''; document.getElementById('ceNewPrice').value = '';
+  renderCatalogEditor();
+}
+function ceSave() {
+  catalogue = ceDraft; ceDraft = null;
+  store('hoppsCatalogue', catalogue);
+  renderCatalogEditor(); toast('Catalogue saved');
+}
+function ceReset() {
+  const cat = document.getElementById('ceCat').value;
+  if (!confirm('Reset ' + cat + ' to the default items and prices?')) return;
+  ceDraft[cat] = JSON.parse(JSON.stringify(defaultCatalogue[cat]));
+  renderCatalogEditor();
+}
+
+/* ---------- Progress log & calendar ---------- */
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth(), editingDay = null;
+function calMove(d) {
+  calMonth += d;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+function hasEntry(e) { return e && (e.work || e.side || (e.job || '').trim() || (e.notes || '').trim() || Object.keys(e.invoices || {}).length); }
+function renderCalendar() {
+  const log = getLog();
+  const first = new Date(calYear, calMonth, 1);
+  const days = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = ymd(new Date());
+  document.getElementById('calTitle').textContent = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  let html = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+  for (let i = 0; i < first.getDay(); i++) html += '<div class="cal-day empty"></div>';
+  for (let d = 1; d <= days; d++) {
+    const key = ymd(new Date(calYear, calMonth, d));
+    const e = log[key] || {};
+    const dots = (e.work ? '<i class="dot work"></i>' : '') + (e.side ? '<i class="dot side"></i>' : '') + ((e.notes || '').trim() ? '<i class="dot note"></i>' : '');
+    html += `<div class="cal-day${key === today ? ' today' : ''}" data-day="${key}" onclick="openDay('${key}')">${d}<div class="dots">${dots}</div></div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+
+  // Month summary
+  const prefix = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
+  const monthKeys = Object.keys(log).filter(k => k.startsWith(prefix));
+  const worked = monthKeys.filter(k => log[k].work).length;
+  const side = monthKeys.filter(k => log[k].side).length;
+  const invTotal = getInvoices().filter(i => i.date.startsWith(prefix)).reduce((s, i) => s + i.total, 0);
+  document.getElementById('monthSummary').innerHTML =
+    `<div class="stat"><div class="v">${worked}</div><div class="l">Days worked</div></div>
+     <div class="stat"><div class="v" style="color:var(--olive)">${side}</div><div class="l">Side project days</div></div>
+     <div class="stat"><div class="v">${money(invTotal)}</div><div class="l">Invoiced</div></div>`;
+
+  // Running log, newest first
+  const keys = Object.keys(log).filter(k => hasEntry(log[k])).sort().reverse().slice(0, 100);
+  document.getElementById('logList').innerHTML = keys.length ? keys.map(k => {
+    const e = log[k];
+    const tags = (e.work ? '<span class="badge" style="background:var(--orange)">Work</span> ' : '') + (e.side ? '<span class="badge" style="background:var(--olive)">Side</span>' : '');
+    const invs = Object.entries(e.invoices || {}).map(([id, t]) => `<div class="muted">🧾 ${esc(id)} — ${esc(t)}</div>`).join('');
+    return `<div class="log-entry" onclick="openDay('${k}')"><b>${niceDate(k)}</b> ${tags}
+      ${e.job ? `<div>${esc(e.job)}</div>` : ''}${invs}
+      ${e.notes ? `<div class="muted" style="white-space:pre-line">${esc(e.notes)}</div>` : ''}</div>`;
+  }).join('') : '<p class="muted">Nothing logged yet. Tap a day to start.</p>';
+}
+function openDay(key) {
+  editingDay = key;
+  const e = getLog()[key] || {};
+  document.getElementById('dayTitle').textContent = niceDate(key);
+  document.getElementById('dWork').checked = !!e.work;
+  document.getElementById('dSide').checked = !!e.side;
+  document.getElementById('dJob').value = e.job || '';
+  document.getElementById('dNotes').value = e.notes || '';
+  const invs = Object.entries(e.invoices || {});
+  document.getElementById('dInvoices').innerHTML = invs.length ? '<b>Invoices this day:</b><br>' + invs.map(([id, t]) => `${esc(id)} — ${esc(t)}`).join('<br>') : '';
+  showScreen('dayEditor');
+}
+function saveDay() {
+  const log = getLog();
+  const e = log[editingDay] || {};
+  e.work = document.getElementById('dWork').checked;
+  e.side = document.getElementById('dSide').checked;
+  e.job = document.getElementById('dJob').value.trim();
+  e.notes = document.getElementById('dNotes').value;
+  log[editingDay] = e;
+  store('hoppsLog', log);
+  const d = parseYmd(editingDay); calYear = d.getFullYear(); calMonth = d.getMonth();
+  toast('Day saved');
+  showScreen('calendar');
+}
+function clearDay() {
+  if (!confirm('Clear everything logged for this day?')) return;
+  const log = getLog(); delete log[editingDay]; store('hoppsLog', log);
+  showScreen('calendar');
+}
+function logInvoice(inv) {
+  // Keyed by invoice number, so repeat previews/exports never duplicate
+  const log = getLog();
+  // If the invoice was previously logged under another day, move it
+  Object.keys(log).forEach(k => { if (k !== inv.date && log[k].invoices && log[k].invoices[inv.id]) delete log[k].invoices[inv.id]; });
+  const e = log[inv.date] || {};
+  e.side = true;
+  e.invoices = e.invoices || {};
+  const label = `${inv.category} ${money(inv.total)}${inv.customer ? ' (' + inv.customer + ')' : ''}`;
+  const wasAuto = !e.job || Object.values(e.invoices).includes(e.job);
+  e.invoices[inv.id] = label;
+  if (wasAuto) e.job = label;
+  log[inv.date] = e;
+  store('hoppsLog', log);
+}
+
+/* ---------- Dashboard ---------- */
+function renderDashboard() {
+  const invs = getInvoices();
+  const now = new Date();
+  const ym = ymd(now).slice(0, 7), yr = String(now.getFullYear());
+  const sum = arr => arr.reduce((s, i) => s + i.total, 0);
+  const month = sum(invs.filter(i => i.date.startsWith(ym)));
+  const year = sum(invs.filter(i => i.date.startsWith(yr)));
+  const unpaidList = invs.filter(i => !i.paid);
+  const paidYear = sum(invs.filter(i => i.paid && i.date.startsWith(yr)));
+  document.getElementById('dashStats').innerHTML =
+    `<div class="stat"><div class="v">${money(month)}</div><div class="l">This month</div></div>
+     <div class="stat"><div class="v">${money(year)}</div><div class="l">${yr} total</div></div>`;
+  document.getElementById('dashStats2').innerHTML =
+    `<div class="stat"><div class="v" style="color:#c0392b">${money(sum(unpaidList))}</div><div class="l">Unpaid (${unpaidList.length})</div></div>
+     <div class="stat"><div class="v" style="color:var(--olive)">${money(paidYear)}</div><div class="l">Collected ${yr}</div></div>`;
+  // Last 12 months bar chart
+  const months = [];
+  for (let k = 11; k >= 0; k--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - k, 1);
+    const key = ymd(d).slice(0, 7);
+    months.push({ lbl: d.toLocaleDateString('en-US', { month: 'narrow' }), v: sum(invs.filter(i => i.date.startsWith(key))), key });
+  }
+  const max = Math.max(1, ...months.map(m => m.v));
+  document.getElementById('dashChart').innerHTML = months.map(m =>
+    `<div class="bar-col" title="${m.key}: ${money(m.v)}"><div class="bar" style="height:${Math.round(m.v / max * 100)}%"></div><div class="bar-lbl">${m.lbl}</div></div>`).join('');
+  // Top work types
+  const byCat = {};
+  invs.forEach(i => { byCat[i.category] = (byCat[i.category] || 0) + i.total; });
+  const top = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  const tmax = Math.max(1, ...top.map(t => t[1]));
+  document.getElementById('dashTop').innerHTML = top.length ? top.map(([c, v]) =>
+    `<div style="display:flex;justify-content:space-between"><span>${esc(c)}</span><b>${money(v)}</b></div><div class="hbar" style="width:${Math.round(v / tmax * 100)}%"></div>`).join('')
+    : '<p class="muted">No invoices yet.</p>';
+}
+
+/* ---------- Backup ---------- */
+function exportBackup() {
+  const data = { app: 'hopps-invoices', version: 2, exported: new Date().toISOString(), data: {} };
+  KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data.data[k] = JSON.parse(v); });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.download = 'Hopps-Backup-' + ymd(new Date()) + '.json';
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+}
+function importBackup() {
+  const file = document.getElementById('backupFile').files[0];
+  const msg = document.getElementById('backupMsg');
+  if (!file) { msg.textContent = 'Choose a backup file first.'; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!parsed || parsed.app !== 'hopps-invoices' || typeof parsed.data !== 'object') throw new Error('Not a Hopps backup file');
+      if (!confirm('Replace all data on this device with the backup from ' + (parsed.exported || 'unknown date') + '?')) return;
+      KEYS.forEach(k => localStorage.removeItem(k));
+      Object.entries(parsed.data).forEach(([k, v]) => { if (KEYS.includes(k)) store(k, v); });
+      loadProfile();
+      msg.textContent = 'Restored ' + getInvoices().length + ' invoice(s).';
+      toast('Backup restored');
+    } catch (e) { msg.textContent = 'Could not restore: ' + e.message; }
+  };
+  reader.readAsText(file);
 }
 
 // PWA
