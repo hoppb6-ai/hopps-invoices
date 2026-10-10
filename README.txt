@@ -25,3 +25,12 @@ Edit the profile first to put your real info in.
 - Jobs: status (Lead to Paid), scheduled date, start/stop timer, manual hours, materials, linked quotes and invoices; create an invoice from a job.
 - Calendar shows scheduled jobs and days you logged job time.
 - Example data: load from the first-run card or Backup & Examples; marked EXAMPLE and removable without touching real data.
+
+## Version 4 features
+- The app opens on the Calendar after the PIN. Bottom tabs: Calendar, Business (invoices, quotes, jobs, customers, earnings), Notes, More (settings, profile, backup).
+- Calendar modes: Work, Side Biz, Personal, and All (every mode's dots together). Month or week view, a Today button, swipe to change month/week, long-press a day (or tap +) for quick add.
+- Work (Boiler Operator at Northwest Hardwoods; change these in More): worked yes/no, shift (Day/Swing/Night/Custom), start/end, break, hours worked out automatically, overtime over 8 h/day and over 40 h/week, day type (Regular/OT/PTO/Sick/Holiday/Off), optional boiler log, notes. Month and pay-period totals; add an hourly wage in More to see estimated gross. Clock in / Clock out button for today.
+- Side Biz: the same side-project, invoice, job and quote tracking as before.
+- Personal: events/appointments/reminders (title, time, Family/Health/Errands/Other, notes), mood and energy, journal.
+- Notes tab: search every mode's notes, filter by mode or tag, pinned notes first; tap a note to open its day.
+- Version 3 data is upgraded automatically: old "Went to work" days move into the Work calendar.
