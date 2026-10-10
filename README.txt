@@ -34,3 +34,7 @@ Edit the profile first to put your real info in.
 - Personal: events/appointments/reminders (title, time, Family/Health/Errands/Other, notes), mood and energy, journal.
 - Notes tab: search every mode's notes, filter by mode or tag, pinned notes first; tap a note to open its day.
 - Version 3 data is upgraded automatically: old "Went to work" days move into the Work calendar.
+
+## Version 4.1
+- New NWH tab (Northwest Hardwoods): opens the Work calendar on today with Clock in/out and the pay-period summary at the top. Change the tab's short name in More, next to the employer.
+- Quick add is now the "+ Add" button next to Today. The header shows a short "Hopps" title.

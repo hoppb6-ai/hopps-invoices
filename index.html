@@ -155,6 +155,7 @@ body:not(.locked) { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 #tabBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; background: white; border-top: 1px solid #eee; box-shadow: 0 -2px 10px rgba(0,0,0,.06); padding-bottom: env(safe-area-inset-bottom); }
 body.locked #tabBar { display: none; }
 #tabBar button { flex: 1; background: none; color: #888; margin: 0; border-radius: 0; padding: 8px 0 10px; font-size: 12px; font-weight: 600; min-height: 60px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+#tabBar button b { font-weight: 700; }
 #tabBar button span { font-size: 22px; filter: grayscale(1); opacity: .7; }
 #tabBar button.on { color: var(--orange); }
 #tabBar button.on span { filter: none; opacity: 1; }
@@ -185,7 +186,6 @@ body.locked #tabBar { display: none; }
 .kv:last-child { border-bottom: none; }
 .clock-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .clock-row button { margin: 0; padding: 12px 22px; white-space: nowrap; flex: 0 0 auto; }
-.fab { position: fixed; right: 18px; bottom: calc(86px + env(safe-area-inset-bottom)); width: 58px; height: 58px; border-radius: 50%; font-size: 30px; padding: 0; z-index: 15; box-shadow: 0 4px 14px rgba(255,102,0,.45); }
 .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; display: none; align-items: flex-end; }
 .sheet.show { display: flex; }
 .sheet-body { background: var(--cream); width: 100%; max-width: 480px; margin: 0 auto; border-radius: 18px 18px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); animation: up .2s ease-out; max-height: 85vh; overflow: auto; }
@@ -208,7 +208,7 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
 <body class="locked">
 
 <header id="appHeader">
-  <h1 id="bizNameHeader">Hopps Handyman Services</h1>
+  <h1 id="bizNameHeader">Hopps</h1>
   <button onclick="calFocus = new Date(); showScreen('calendar')" aria-label="Today">📅 Today</button>
   <button onclick="lockApp()" aria-label="Lock">🔒</button>
 </header>
@@ -363,14 +363,20 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
     <button data-mode="personal" onclick="setMode('personal')">Personal</button>
     <button data-mode="all" onclick="setMode('all')">All</button>
   </div>
-  <div class="card cal-card">
+  <div class="card" id="clockCard" style="display:none">
+    <div class="clock-row"><div><b id="clockTitle">Today</b><div class="muted" id="clockStatus"></div></div>
+    <button id="clockBtn" onclick="clockToggle()" style="width:auto">Clock in</button></div>
+  </div>
+  <div id="periodSlot"></div>
+  <div class="card cal-card" id="calCard">
     <div class="cal-head">
       <button class="small" onclick="calMove(-1)" aria-label="Previous">‹</button>
       <h3 id="calTitle"></h3>
       <button class="small" onclick="calMove(1)" aria-label="Next">›</button>
     </div>
     <div class="cal-tools">
-      <button class="small secondary" onclick="calToday()">Today</button>
+      <span><button class="small secondary" onclick="calToday()">Today</button>
+      <button class="small" id="quickAddBtn" onclick="quickAdd(ymd(new Date()))" aria-label="Quick add">＋ Add</button></span>
       <div class="seg mini" id="viewSeg">
         <button data-view="month" onclick="setView('month')">Month</button>
         <button data-view="week" onclick="setView('week')">Week</button>
@@ -380,17 +386,12 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
     <div class="legend" id="calLegend"></div>
     <p class="muted" style="margin:6px 0 0">Tap a day to open · long-press for quick add · swipe for next/previous</p>
   </div>
-  <div class="card" id="clockCard" style="display:none">
-    <div class="clock-row"><div><b id="clockTitle">Today</b><div class="muted" id="clockStatus"></div></div>
-    <button id="clockBtn" onclick="clockToggle()" style="width:auto">Clock in</button></div>
-  </div>
   <div class="stats-row wrap" id="monthSummary"></div>
   <div class="card" id="periodCard" style="display:none"></div>
   <div class="card">
     <h3 id="logTitle">Recent</h3>
     <div id="logList"></div>
   </div>
-  <button class="fab" onclick="quickAdd(ymd(new Date()))" aria-label="Quick add">＋</button>
 </div>
 
 <!-- Quick add sheet -->
@@ -498,7 +499,8 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
   <div class="card">
     <h3>💼 Day job</h3>
     <div class="row2">
-      <div><label>Employer</label><input id="sEmployer"></div>
+      <div style="flex:2"><label>Employer</label><input id="sEmployer"></div>
+      <div><label>Short name</label><input id="sAbbr" maxlength="6" placeholder="NWH"></div>
       <div><label>Job title</label><input id="sTitle"></div>
     </div>
     <div class="row2">
@@ -699,7 +701,8 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
 
 <div id="toast" class="toast"></div>
 <nav id="tabBar">
-  <button data-tab="calendar" onclick="showScreen('calendar')"><span>📅</span>Calendar</button>
+  <button data-tab="calendar" onclick="openCalendarTab()"><span>📅</span>Calendar</button>
+  <button data-tab="nwh" id="nwhTab" onclick="openNwh()" aria-label="Northwest Hardwoods"><span>🔥</span><b id="nwhTabLabel">NWH</b></button>
   <button data-tab="menu" onclick="showScreen('menu')"><span>🧾</span>Business</button>
   <button data-tab="notes" onclick="showScreen('notes')"><span>📝</span>Notes</button>
   <button data-tab="more" onclick="showScreen('more')"><span>⚙️</span>More</button>
@@ -802,7 +805,7 @@ function loadProfile() {
   const saved = localStorage.getItem('hoppsProfile');
   if (saved) profile = JSON.parse(saved);
   catalogue = load('hoppsCatalogue', JSON.parse(JSON.stringify(defaultCatalogue)));
-  document.getElementById('bizNameHeader').textContent = profile.name;
+  document.getElementById('bizNameHeader').textContent = 'Hopps';
 }
 function saveProfile() {
   // Dual verification: PIN + typed SAVE are both required.
@@ -829,7 +832,7 @@ function saveProfile() {
   profile.maint = parseFloat(document.getElementById('pMaint').value) || 0;
   profile.rate = parseFloat(document.getElementById('pRate').value) || 0;
   localStorage.setItem('hoppsProfile', JSON.stringify(profile));
-  document.getElementById('bizNameHeader').textContent = profile.name;
+  document.getElementById('bizNameHeader').textContent = 'Hopps';
   toast('Profile saved');
   showScreen('more');
   return true;
@@ -869,7 +872,9 @@ function showScreen(id) {
   if (id === 'notes') renderNotes();
   if (id === 'more') fillSettings();
   const tabFor = { calendar: 'calendar', dayEditor: 'calendar', notes: 'notes', more: 'more', profile: 'more', backup: 'more', catalogEditor: 'more' };
-  document.querySelectorAll('#tabBar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (tabFor[id] || 'menu')));
+  let tab = tabFor[id] || 'menu';
+  if (tab === 'calendar' && nwhView) tab = 'nwh';
+  document.querySelectorAll('#tabBar button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   if (id === 'newInvoice') document.getElementById('newInvTitle').textContent = builderMode === 'quote' ? 'New Quote: Work Type' : 'Select Work Type';
   updateExampleUI();
 }
@@ -1435,7 +1440,7 @@ function ceReset() {
 
 /* ---------- Settings, work & personal data ---------- */
 const DEFAULT_SETTINGS = {
-  employer: 'Northwest Hardwoods', title: 'Boiler Operator', wage: 0, ptoHours: 8,
+  employer: 'Northwest Hardwoods', abbr: 'NWH', title: 'Boiler Operator', wage: 0, ptoHours: 8,
   otDaily: 8, otWeekly: 40, payLen: 14, payStart: '2026-01-04', weekStart: 0,
   shifts: { Day: ['06:00', '14:00'], Swing: ['14:00', '22:00'], Night: ['22:00', '06:00'] }
 };
@@ -1536,7 +1541,20 @@ let calMode = load('hoppsCalMode', 'work');
 let calView = load('hoppsCalView', 'month');
 let calFocus = new Date(), editingDay = null, daySec = 'work', dayDraftEvents = [];
 let calYear, calMonth;   // kept for compatibility
-function setMode(m) { calMode = m; store('hoppsCalMode', m); renderCalendar(); }
+let nwhView = false;   // calendar opened from the employer (NWH) tab
+function updateNwhTab() {
+  const S = getSettings();
+  document.getElementById('nwhTabLabel').textContent = S.abbr || 'NWH';
+  document.getElementById('nwhTab').setAttribute('aria-label', S.employer);
+  document.getElementById('nwhTab').title = S.employer;
+}
+function openNwh() {
+  nwhView = true; calMode = 'work'; store('hoppsCalMode', 'work');
+  calFocus = new Date();
+  showScreen('calendar');
+}
+function openCalendarTab() { nwhView = false; showScreen('calendar'); }
+function setMode(m) { if (m !== 'work') nwhView = false; calMode = m; store('hoppsCalMode', m); renderCalendar(); }
 function setView(v) { calView = v; store('hoppsCalView', v); renderCalendar(); }
 function calToday() { calFocus = new Date(); renderCalendar(); }
 function calMove(d) {
@@ -1671,6 +1689,9 @@ function renderCalendar() {
 
   // Pay period + weekly OT (work mode)
   const pc = document.getElementById('periodCard');
+  if (nwhView && calMode === 'work') document.getElementById('periodSlot').appendChild(pc);
+  else document.getElementById('monthSummary').after(pc);
+  document.querySelectorAll('#tabBar button').forEach(b => { if (b.dataset.tab === 'calendar' || b.dataset.tab === 'nwh') b.classList.toggle('on', document.getElementById('calendar').classList.contains('active') && b.dataset.tab === (nwhView && calMode === 'work' ? 'nwh' : 'calendar')); });
   pc.style.display = calMode === 'work' ? 'block' : 'none';
   if (calMode === 'work') {
     const [ps, pe] = payPeriodFor(today);
@@ -1994,7 +2015,7 @@ function renderNotes() {
 function fillSettings() {
   const S = getSettings();
   const set = (id, v) => document.getElementById(id).value = v;
-  set('sEmployer', S.employer); set('sTitle', S.title); set('sWage', S.wage || ''); set('sPto', S.ptoHours);
+  set('sEmployer', S.employer); set('sAbbr', S.abbr); set('sTitle', S.title); set('sWage', S.wage || ''); set('sPto', S.ptoHours);
   set('sOtDaily', S.otDaily); set('sOtWeekly', S.otWeekly); set('sPayLen', String(S.payLen)); set('sPayStart', S.payStart); set('sWeekStart', String(S.weekStart));
   set('sDayS', S.shifts.Day[0]); set('sDayE', S.shifts.Day[1]); set('sSwingS', S.shifts.Swing[0]); set('sSwingE', S.shifts.Swing[1]); set('sNightS', S.shifts.Night[0]); set('sNightE', S.shifts.Night[1]);
 }
@@ -2002,11 +2023,12 @@ function saveSettings() {
   const v = id => document.getElementById(id).value;
   const num = (id, d) => { const n = parseFloat(v(id)); return isNaN(n) ? d : n; };
   store('hoppsSettings', {
-    employer: v('sEmployer').trim() || DEFAULT_SETTINGS.employer, title: v('sTitle').trim() || DEFAULT_SETTINGS.title,
+    employer: v('sEmployer').trim() || DEFAULT_SETTINGS.employer, abbr: v('sAbbr').trim().slice(0, 6) || DEFAULT_SETTINGS.abbr, title: v('sTitle').trim() || DEFAULT_SETTINGS.title,
     wage: num('sWage', 0), ptoHours: num('sPto', 8), otDaily: num('sOtDaily', 8), otWeekly: num('sOtWeekly', 40),
     payLen: Number(v('sPayLen')) || 14, payStart: v('sPayStart') || DEFAULT_SETTINGS.payStart, weekStart: Number(v('sWeekStart')) || 0,
     shifts: { Day: [v('sDayS'), v('sDayE')], Swing: [v('sSwingS'), v('sSwingE')], Night: [v('sNightS'), v('sNightE')] }
   });
+  updateNwhTab();
   toast('Settings saved');
 }
 
@@ -2329,7 +2351,7 @@ function updateExampleUI() {
   document.querySelectorAll('.ex-banner').forEach(b => b.classList.toggle('show', show));
   const fresh = !getInvoices().length && !getQuotes().length && !getJobs().length && !Object.keys(getWork()).length &&
     !Object.keys(getPersonal()).length && !Object.keys(getLog()).length && !localStorage.getItem('hoppsExamplesDismissed');
-  document.getElementById('firstRunCard').style.display = fresh ? 'block' : 'none';
+  document.getElementById('firstRunCard').style.display = fresh && !(typeof nwhView !== 'undefined' && nwhView) ? 'block' : 'none';
 }
 function dismissFirstRun() { store('hoppsExamplesDismissed', true); updateExampleUI(); }
 function loadExamples() {
@@ -2443,6 +2465,7 @@ document.getElementById('pinInput').addEventListener('keyup', e => {
 
 migrateData();
 loadProfile();
+updateNwhTab();
 </script>
 </body>
 </html>
