@@ -43,3 +43,10 @@ Edit the profile first to put your real info in.
 - AOCs (Abnormal Operating Conditions): log date/time, equipment (Boiler 1, Boiler 2, Both, Other), title, Probable vs Actual, severity, actions, status and resolved date, plus tags. Open the full searchable list from the NWH tab. AOCs show as a diamond marker on the calendar (red = high and still open).
 - Daily checklist on the NWH tab and in each work day: meter reading, boiler systems checks, chemical tests per boiler (sulfite, pH, conductivity), overall check, blowdown time. Ticking an item records the time. Edit items, units and normal ranges in More; "Readings history" compares recent values and shows out-of-range ones in red.
 - Chemical-test and blowdown notes from the old boiler log were moved into the checklist automatically.
+
+v4.3 — Data safety
+- Automatic snapshots (IndexedDB, localStorage fallback): taken when the app is hidden/closed, every 3 minutes while open, and a few seconds after saves. Keeps the last 10 plus one per day for 7 days. Broken or empty data is never snapshotted.
+- 💾 Save (header and More): full backup JSON. Uses the file picker to save over the same file where supported, the iOS share sheet (Save to Files) where available, otherwise a download. Default name Hopps-Backup-YYYY-MM-DD.json; Save As remembers a custom name.
+- More → Restore: restore any snapshot or a backup file. Current data is snapshotted first.
+- On startup, if saved data is damaged or missing and snapshots exist, the app offers to restore the latest one.
+- Reminder banner if no backup file has been saved in 3+ days (dismissible).

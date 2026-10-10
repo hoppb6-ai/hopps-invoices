@@ -203,6 +203,10 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
 .tag { display: inline-block; font-size: 12px; color: var(--blue); background: #E8EEF5; border-radius: 8px; padding: 1px 6px; margin-top: 4px; }
 .shift-l { flex: 0 0 56px !important; align-self: center; font-weight: 600; color: #555; }
 .note-item { cursor: pointer; }
+.save-banner { background: #EAF2FB; border-color: var(--blue); color: #24405f; }
+.save-banner button { width: auto; margin: 0 0 0 4px; }
+.snap .top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+#hdrSave { font-weight: 700; }
 /* v4.2: checklist & AOCs */
 .cl-head, .cl-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .cl-title button { width: auto; }
@@ -246,11 +250,13 @@ table.rd tr { cursor: pointer; }
 <header id="appHeader">
   <h1 id="bizNameHeader">Hopps</h1>
   <button onclick="calFocus = new Date(); showScreen('calendar')" aria-label="Today">📅 Today</button>
+  <button onclick="saveFile()" aria-label="Save backup" id="hdrSave">💾 Save</button>
   <button onclick="lockApp()" aria-label="Lock">🔒</button>
 </header>
 
 <!-- PIN Screen -->
 <div id="pinScreen" class="screen active">
+  <div id="recoveryCard" class="card" style="display:none; border:2px solid #c0392b; margin-top:12px"></div>
   <div class="pin-box">
     <h1>Hopps Invoices</h1>
     <input id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="PIN">
@@ -393,6 +399,7 @@ table.rd tr { cursor: pointer; }
     <button class="olive" onclick="loadExamples()">Load example data</button>
     <button class="secondary" onclick="dismissFirstRun()">No thanks, start fresh</button>
   </div>
+  <div class="ex-banner save-banner" id="saveReminder"><span>💾 Save a backup file</span><button class="small" onclick="saveFile()">Save</button><button class="small secondary" onclick="dismissSaveReminder()" aria-label="Dismiss">✕</button></div>
   <div class="seg" id="modeSeg">
     <button data-mode="work" onclick="setMode('work')">Work</button>
     <button data-mode="side" onclick="setMode('side')">Side Biz</button>
@@ -575,6 +582,21 @@ table.rd tr { cursor: pointer; }
   <button onclick="openNwh()" class="secondary">Back to NWH</button>
 </div>
 
+<!-- Restore -->
+<div id="restore" class="screen">
+  <h2>Restore</h2>
+  <p class="muted">Restoring replaces all data on this device. A snapshot of the current data is taken first, so you can undo.</p>
+  <div class="card">
+    <h3>From a backup file</h3>
+    <input id="restoreFile" type="file" accept=".json,application/json">
+    <button class="danger" onclick="restoreFromFile('restoreFile','restoreMsg')">Restore from File</button>
+    <p id="restoreMsg" class="muted"></p>
+  </div>
+  <h3>Automatic snapshots</h3>
+  <div id="snapList"></div>
+  <button onclick="showScreen('more')" class="secondary">Back</button>
+</div>
+
 <!-- Notes -->
 <div id="notes" class="screen">
   <h2>Notes</h2>
@@ -618,6 +640,13 @@ table.rd tr { cursor: pointer; }
     <div class="row2"><span class="shift-l">Swing</span><input id="sSwingS" type="time"><input id="sSwingE" type="time"></div>
     <div class="row2"><span class="shift-l">Night</span><input id="sNightS" type="time"><input id="sNightE" type="time"></div>
     <button onclick="saveSettings()">Save Settings</button>
+  </div>
+  <div class="card">
+    <h3>💾 Save &amp; Restore</h3>
+    <p class="muted" id="lastSaveInfo"></p>
+    <div class="row2"><button onclick="saveFile()">Save</button><button class="secondary" onclick="saveFile(true)">Save As…</button></div>
+    <button class="secondary" onclick="showScreen('restore')">Restore…</button>
+    <p class="muted">Save writes a full backup file (on iPhone choose “Save to Files”; picking the same name and Replace updates it). Automatic snapshots are also kept on this device: the last 10 plus one per day for 7 days.</p>
   </div>
   <div class="card">
     <h3>✅ Daily checklist</h3>
@@ -877,7 +906,10 @@ const KEYS = ['hoppsProfile', 'hoppsCatalogue', 'hoppsInvoices', 'hoppsNextNum',
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
 }
-function store(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function store(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+  if (typeof scheduleSnapshot === 'function' && key !== 'hoppsCalMode' && key !== 'hoppsCalView') scheduleSnapshot('save');
+}
 const getInvoices = () => load('hoppsInvoices', []);
 const getLog = () => load('hoppsLog', {});
 const getCustomers = () => load('hoppsCustomers', []);
@@ -909,7 +941,7 @@ function toast(msg) {
 /* ---------- Profile ---------- */
 function loadProfile() {
   const saved = localStorage.getItem('hoppsProfile');
-  if (saved) profile = JSON.parse(saved);
+  if (saved) { try { profile = Object.assign({}, profile, JSON.parse(saved)); } catch (e) { /* damaged profile: keep defaults */ } }
   catalogue = load('hoppsCatalogue', JSON.parse(JSON.stringify(defaultCatalogue)));
   document.getElementById('bizNameHeader').textContent = 'Hopps';
 }
@@ -978,8 +1010,10 @@ function showScreen(id) {
   if (id === 'notes') renderNotes();
   if (id === 'more') { fillSettings(); clDraft = null; clEdRender(); }
   if (id === 'aocs') renderAocList();
+  if (id === 'restore') renderRestore();
+  updateSaveUI();
   if (id === 'readings') renderReadings();
-  const tabFor = { calendar: 'calendar', dayEditor: 'calendar', notes: 'notes', more: 'more', aocs: 'nwh', aocEdit: 'nwh', readings: 'nwh', profile: 'more', backup: 'more', catalogEditor: 'more' };
+  const tabFor = { restore: 'more', calendar: 'calendar', dayEditor: 'calendar', notes: 'notes', more: 'more', aocs: 'nwh', aocEdit: 'nwh', readings: 'nwh', profile: 'more', backup: 'more', catalogEditor: 'more' };
   let tab = tabFor[id] || 'menu';
   if (tab === 'calendar' && nwhView) tab = 'nwh';
   document.querySelectorAll('#tabBar button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
@@ -2487,34 +2521,222 @@ function renderDashboard() {
 
 /* ---------- Backup ---------- */
 function exportBackup() {
-  const data = { app: 'hopps-invoices', version: 5, exported: new Date().toISOString(), data: {} };
-  KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) { try { data.data[k] = JSON.parse(v); } catch (e) { data.data[k] = v; } } });
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
-  link.download = 'Hopps-Backup-' + ymd(new Date()) + '.json';
-  link.href = URL.createObjectURL(blob);
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+  const bk = buildBackup(); delete bk.ok;
+  downloadBlob(new Blob([JSON.stringify(bk, null, 2)], { type: 'application/json' }), defaultFileName());
+  fileSaved('Backup downloaded');
 }
-function importBackup() {
-  const file = document.getElementById('backupFile').files[0];
-  const msg = document.getElementById('backupMsg');
+function importBackup() { restoreFromFile('backupFile', 'backupMsg'); }
+
+/* ---------- Data safety: snapshots, save, restore, recovery ---------- */
+const SNAP_AUTO_MAX = 10, SNAP_DAILY_MAX = 7, SNAP_FALLBACK_MAX = 5;
+let lastSnapHash = null, snapTimer = null, fileHandle = null;
+function buildBackup() {
+  const data = {}; let ok = true;
+  KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v === null) return;
+    try { data[k] = JSON.parse(v); } catch (e) { ok = false; data[k] = v; }
+  });
+  return { app: 'hopps-invoices', version: 6, exported: new Date().toISOString(), ok, data };
+}
+function hasAnyData(d) {
+  if (!d) return false;
+  const arr = k => Array.isArray(d[k]) && d[k].length, obj = k => d[k] && typeof d[k] === 'object' && Object.keys(d[k]).length;
+  return !!(arr('hoppsInvoices') || arr('hoppsQuotes') || arr('hoppsJobs') || arr('hoppsAocs') || arr('hoppsCustomers') || obj('hoppsWork') || obj('hoppsPersonal') || obj('hoppsLog') || d.hoppsProfile);
+}
+function countsOf(d) {
+  const n = k => Array.isArray(d[k]) ? d[k].length : (d[k] && typeof d[k] === 'object' ? Object.keys(d[k]).length : 0);
+  return { invoices: n('hoppsInvoices'), quotes: n('hoppsQuotes'), jobs: n('hoppsJobs'), work: n('hoppsWork'), personal: n('hoppsPersonal'), aocs: n('hoppsAocs') };
+}
+const countsText = c => `${c.invoices} inv · ${c.quotes} quotes · ${c.jobs} jobs · ${c.work} work days · ${c.personal} personal · ${c.aocs} AOCs`;
+function quickHash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return h + ':' + s.length; }
+
+// IndexedDB (separate from localStorage so snapshots survive main-data problems)
+let dbPromise = null;
+function getDb() {
+  if (!dbPromise) dbPromise = new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error('IndexedDB unavailable'));
+    const r = indexedDB.open('hopps-snapshots', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('snaps', { keyPath: 'id' }); r.result.createObjectStore('meta'); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  }).catch(e => { dbPromise = null; throw e; });
+  return dbPromise;
+}
+const idbReq = (store, mode, fn) => getDb().then(db => new Promise((res, rej) => {
+  const tx = db.transaction(store, mode); const st = tx.objectStore(store);
+  const r = fn(st); let out;
+  if (r) r.onsuccess = () => { out = r.result; };
+  tx.oncomplete = () => res(out); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+}));
+const metaGet = k => idbReq('meta', 'readonly', st => st.get(k));
+const metaPut = (k, v) => idbReq('meta', 'readwrite', st => { st.put(v, k); });
+const fallbackSnaps = () => { try { const a = JSON.parse(localStorage.getItem('hoppsSnapFallback') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+
+function scheduleSnapshot(reason) {
+  clearTimeout(snapTimer);
+  snapTimer = setTimeout(() => takeSnapshot(reason || 'save'), 4000);
+}
+async function takeSnapshot(reason, force) {
+  try {
+    const bk = buildBackup();
+    if (!bk.ok || !hasAnyData(bk.data)) return null;          // never snapshot broken or empty data
+    const json = JSON.stringify(bk.data), h = quickHash(json);
+    if (!force && h === lastSnapHash) return null;
+    const now = new Date();
+    const rec = { id: 'auto-' + now.getTime(), ts: now.toISOString(), kind: reason === 'pre-restore' ? 'pre-restore' : 'auto', reason, counts: countsOf(bk.data), data: bk.data };
+    const daily = Object.assign({}, rec, { id: 'daily-' + ymd(now), kind: 'daily' });
+    try {
+      const keys = (await idbReq('snaps', 'readonly', st => st.getAllKeys())) || [];
+      const autos = keys.filter(k => k.startsWith('auto-')).sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)));
+      const dailies = keys.filter(k => k.startsWith('daily-') && k !== daily.id).sort();
+      const del = [...autos.slice(0, Math.max(0, autos.length + 1 - SNAP_AUTO_MAX)), ...dailies.slice(0, Math.max(0, dailies.length + 1 - SNAP_DAILY_MAX))];
+      await idbReq('snaps', 'readwrite', st => { st.put(rec); st.put(daily); del.forEach(k => st.delete(k)); });
+    } catch (e) {
+      // Fallback: a few rotating snapshots in localStorage
+      let arr = fallbackSnaps(); arr.push(rec); arr = arr.slice(-SNAP_FALLBACK_MAX);
+      while (arr.length) { try { localStorage.setItem('hoppsSnapFallback', JSON.stringify(arr)); break; } catch (q) { arr.shift(); } }
+    }
+    lastSnapHash = h;
+    localStorage.setItem('hoppsLastSnapshot', rec.ts);
+    return rec;
+  } catch (e) { return null; }
+}
+async function listSnapshots() {
+  let list = [];
+  try { list = (await idbReq('snaps', 'readonly', st => st.getAll())) || []; } catch (e) { }
+  fallbackSnaps().forEach(s => { if (!list.some(x => x.id === s.id)) list.push(Object.assign({ fallback: true }, s)); });
+  return list.sort((a, b) => b.ts.localeCompare(a.ts) || (a.kind === 'daily') - (b.kind === 'daily'));
+}
+function applyData(data) {
+  KEYS.forEach(k => localStorage.removeItem(k));
+  Object.entries(data).forEach(([k, v]) => { if (KEYS.includes(k)) localStorage.setItem(k, JSON.stringify(v)); });
+  lastSnapHash = null;
+  migrateData(); loadProfile(); updateNwhTab(); updateExampleUI(); updateSaveUI();
+  calMode = load('hoppsCalMode', 'work'); calView = load('hoppsCalView', 'month');
+}
+async function restoreSnapshot(id) {
+  const s = (await listSnapshots()).find(x => x.id === id); if (!s) return;
+  if (!confirm(`Replace ALL current data with the snapshot from ${new Date(s.ts).toLocaleString()}?\n(${countsText(s.counts)})\nYour current data is snapshotted first.`)) return;
+  await takeSnapshot('pre-restore', true);
+  applyData(s.data);
+  document.getElementById('recoveryCard').style.display = 'none';
+  toast('Snapshot restored');
+  if (!document.body.classList.contains('locked')) showScreen('calendar');
+}
+function restoreFromFile(inputId, msgId) {
+  const file = document.getElementById(inputId).files[0];
+  const msg = document.getElementById(msgId);
   if (!file) { msg.textContent = 'Choose a backup file first.'; return; }
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
-      const parsed = JSON.parse(reader.result);
+      let parsed;
+      try { parsed = JSON.parse(reader.result); } catch (e) { throw new Error('File is not valid JSON'); }
       if (!parsed || parsed.app !== 'hopps-invoices' || typeof parsed.data !== 'object') throw new Error('Not a Hopps backup file');
-      if (!confirm('Replace all data on this device with the backup from ' + (parsed.exported || 'unknown date') + '?')) return;
-      KEYS.forEach(k => localStorage.removeItem(k));
-      Object.entries(parsed.data).forEach(([k, v]) => { if (KEYS.includes(k)) store(k, v); });
-      migrateData(); loadProfile(); updateExampleUI();
+      if (!confirm('Replace all data on this device with the backup from ' + (parsed.exported || 'unknown date') + '?\nYour current data is snapshotted first.')) return;
+      await takeSnapshot('pre-restore', true);
+      applyData(parsed.data);
       msg.textContent = 'Restored ' + getInvoices().length + ' invoice(s).';
       toast('Backup restored');
     } catch (e) { msg.textContent = 'Could not restore: ' + e.message; }
   };
   reader.readAsText(file);
 }
+async function renderRestore() {
+  const list = await listSnapshots();
+  document.getElementById('snapList').innerHTML = list.length ? list.map(s => `
+    <div class="card snap">
+      <div class="top"><b>${new Date(s.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</b>
+        <span class="badge" style="background:${s.kind === 'daily' ? 'var(--olive)' : s.kind === 'pre-restore' ? '#E08E0B' : '#888'}">${s.kind === 'daily' ? 'DAILY' : s.kind === 'pre-restore' ? 'BEFORE RESTORE' : 'AUTO'}</span>${s.fallback ? ' <span class="badge ex">fallback</span>' : ''}</div>
+      <div class="muted">${countsText(s.counts)}</div>
+      <button class="small" onclick="restoreSnapshot('${s.id}')">Restore this snapshot</button>
+    </div>`).join('') : '<p class="muted">No snapshots yet. They are taken automatically while you use the app.</p>';
+}
+
+/* Save / Save As */
+const defaultFileName = () => 'Hopps-Backup-' + ymd(new Date()) + '.json';
+function downloadBlob(blob, name) {
+  const link = document.createElement('a');
+  link.download = name; link.href = URL.createObjectURL(blob); link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+}
+function fileSaved(msg) {
+  localStorage.setItem('hoppsLastFileSave', new Date().toISOString());
+  toast(msg); updateSaveUI();
+}
+async function saveFile(saveAs) {
+  let name = localStorage.getItem('hoppsLastFileName') || defaultFileName();
+  if (saveAs) {
+    const n = prompt('Save backup as (file name):', name);
+    if (n === null) return;
+    name = (n.trim() || name).replace(/[\\/:*?"<>|]/g, '-');
+    if (!/\.json$/i.test(name)) name += '.json';
+    localStorage.setItem('hoppsLastFileName', name);
+  }
+  const bk = buildBackup(); delete bk.ok;
+  const blob = new Blob([JSON.stringify(bk, null, 2)], { type: 'application/json' });
+  try {
+    if (window.showSaveFilePicker) {
+      // File System Access API: keep a handle and save over the same file
+      if (saveAs || !fileHandle) {
+        fileHandle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Hopps backup', accept: { 'application/json': ['.json'] } }] });
+        metaPut('fileHandle', fileHandle).catch(() => {});
+      } else if (fileHandle.queryPermission && (await fileHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+        if ((await fileHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('Permission to the file was denied');
+      }
+      const w = await fileHandle.createWritable(); await w.write(blob); await w.close();
+      fileSaved('Saved to ' + (fileHandle.name || name));
+      return;
+    }
+    const file = new File([blob], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name });   // iOS: choose "Save to Files" (same name → Replace)
+      fileSaved('Backup shared as ' + name);
+      return;
+    }
+    downloadBlob(blob, name);
+    fileSaved('Downloaded ' + name);
+  } catch (e) {
+    if (e && e.name === 'AbortError') { toast('Save cancelled'); return; }
+    toast('Save failed: ' + (e && e.message || e));
+  }
+}
+function updateSaveUI() {
+  const last = localStorage.getItem('hoppsLastFileSave');
+  const snap = localStorage.getItem('hoppsLastSnapshot');
+  const fmt = t => new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const info = document.getElementById('lastSaveInfo');
+  if (info) info.innerHTML = `Last file save: <b>${last ? fmt(last) : 'never'}</b>${localStorage.getItem('hoppsLastFileName') ? ` (${esc(localStorage.getItem('hoppsLastFileName'))})` : ''}<br>Last auto snapshot: <b>${snap ? fmt(snap) : '—'}</b>`;
+  const banner = document.getElementById('saveReminder'); if (!banner) return;
+  const days = t => t ? (Date.now() - new Date(t)) / 86400000 : Infinity;
+  const dismissed = days(localStorage.getItem('hoppsSaveReminderDismissed')) < 3;
+  const show = !document.body.classList.contains('locked') && days(last) >= 3 && !dismissed && hasAnyData(buildBackup().data);
+  banner.classList.toggle('show', show);
+  if (show) banner.querySelector('span').textContent = last ? `💾 No backup file saved in ${Math.floor(days(last))} days.` : '💾 You haven\'t saved a backup file yet.';
+}
+function dismissSaveReminder() { localStorage.setItem('hoppsSaveReminderDismissed', new Date().toISOString()); updateSaveUI(); }
+
+/* Startup recovery: offer the latest snapshot if main data is broken or missing */
+async function checkRecovery() {
+  const bad = KEYS.filter(k => { const v = localStorage.getItem(k); if (v === null) return false; try { JSON.parse(v); return false; } catch (e) { return true; } });
+  const empty = !hasAnyData(buildBackup().data);
+  if (!bad.length && !empty) return;
+  const snaps = (await listSnapshots()).filter(s => hasAnyData(s.data));
+  if (!snaps.length) return;
+  const s = snaps[0];
+  const card = document.getElementById('recoveryCard');
+  card.innerHTML = `<h3>⚠️ ${bad.length ? 'Some saved data could not be read' : 'No data found on this device'}</h3>
+    <p>${bad.length ? 'Damaged: ' + bad.map(esc).join(', ') + '. ' : ''}A snapshot from <b>${new Date(s.ts).toLocaleString()}</b> is available (${countsText(s.counts)}).</p>
+    <button onclick="restoreSnapshot('${s.id}')">Restore latest snapshot</button>
+    <button class="secondary" onclick="document.getElementById('recoveryCard').style.display='none'">Not now</button>`;
+  card.style.display = 'block';
+}
+
+// Snapshot triggers: hide, pagehide, every 3 minutes while open, and after saves (debounced in store())
+document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(snapTimer); takeSnapshot('hidden'); } });
+window.addEventListener('pagehide', () => { clearTimeout(snapTimer); takeSnapshot('pagehide'); });
+setInterval(() => { if (!document.hidden) takeSnapshot('timer'); }, 3 * 60 * 1000);
 
 /* ---------- Quotes ---------- */
 const QUOTE_COLORS = { Draft: '#888', Sent: '#3A5A80', Accepted: '#6B8E23', Declined: '#c0392b' };
@@ -2874,6 +3096,8 @@ document.getElementById('pinInput').addEventListener('keyup', e => {
 migrateData();
 loadProfile();
 updateNwhTab();
+checkRecovery();
+metaGet('fileHandle').then(h => { if (h) fileHandle = h; }).catch(() => {});
 </script>
 </body>
 </html>
