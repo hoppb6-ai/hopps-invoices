@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hopp">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#FF6600">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Hopps Invoices</title>
+<title>Hopp</title>
 <style>
 :root {
   --orange: #FF6600;
@@ -203,6 +204,10 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
 .tag { display: inline-block; font-size: 12px; color: var(--blue); background: #E8EEF5; border-radius: 8px; padding: 1px 6px; margin-top: 4px; }
 .shift-l { flex: 0 0 56px !important; align-self: center; font-weight: 600; color: #555; }
 .note-item { cursor: pointer; }
+.cl-n { color: var(--orange); font-weight: 800; min-width: 1.6em; display: inline-block; }
+.mu { font-size: .85rem; margin: 4px 0 2px; color: #444; }
+.neg { color: #c0392b !important; }
+.cl-legacy { margin-top: 8px; font-size: .85rem; } .cl-legacy ul { margin: 4px 0; padding-left: 18px; }
 .save-banner { background: #EAF2FB; border-color: var(--blue); color: #24405f; }
 .save-banner button { width: auto; margin: 0 0 0 4px; }
 .snap .top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
@@ -248,7 +253,7 @@ table.rd tr { cursor: pointer; }
 <body class="locked">
 
 <header id="appHeader">
-  <h1 id="bizNameHeader">Hopps</h1>
+  <h1 id="bizNameHeader">Hopp</h1>
   <button onclick="calFocus = new Date(); showScreen('calendar')" aria-label="Today">📅 Today</button>
   <button onclick="saveFile()" aria-label="Save backup" id="hdrSave">💾 Save</button>
   <button onclick="lockApp()" aria-label="Lock">🔒</button>
@@ -258,7 +263,7 @@ table.rd tr { cursor: pointer; }
 <div id="pinScreen" class="screen active">
   <div id="recoveryCard" class="card" style="display:none; border:2px solid #c0392b; margin-top:12px"></div>
   <div class="pin-box">
-    <h1>Hopps Invoices</h1>
+    <h1>Hopp</h1>
     <input id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="PIN">
     <button onclick="checkPin()">Unlock</button>
     <p id="pinError" style="color:red; display:none;">Wrong PIN</p>
@@ -394,7 +399,7 @@ table.rd tr { cursor: pointer; }
 <!-- Calendar (home) -->
 <div id="calendar" class="screen">
   <div id="firstRunCard" class="card" style="display:none; border:2px solid var(--olive)">
-    <h3>👋 Welcome to Hopps Invoices</h3>
+    <h3>👋 Welcome to Hopp</h3>
     <p>Want to look around first? Load a few clearly-marked <b>example</b> work shifts, personal events, invoices, quotes and jobs. You can remove them anytime and your real data is never touched.</p>
     <button class="olive" onclick="loadExamples()">Load example data</button>
     <button class="secondary" onclick="dismissFirstRun()">No thanks, start fresh</button>
@@ -477,7 +482,7 @@ table.rd tr { cursor: pointer; }
       </div>
       <label>Water level checks</label><input id="bWater" placeholder="e.g. Gauge glass OK 7am/11am, low-water cutoff tested">
       <label>Fuel / wood fired</label><input id="bFuel" placeholder="e.g. hog fuel, ~18 tons">
-      <p class="muted" style="margin:6px 0 0">Chemical tests and blowdowns are recorded in the daily checklist.</p>
+      <p class="muted" style="margin:6px 0 0">Meter readings and water sample tests are recorded in the daily checklist.</p>
       <label>Incidents / maintenance</label><textarea id="bIncidents" rows="2"></textarea>
     </details>
     <label>Work notes</label><textarea id="dWorkNotes" rows="4"></textarea>
@@ -582,6 +587,14 @@ table.rd tr { cursor: pointer; }
   <button onclick="openNwh()" class="secondary">Back to NWH</button>
 </div>
 
+<!-- Meter history -->
+<div id="meters" class="screen">
+  <h2>Meter history</h2>
+  <select id="mtItem" onchange="renderMeters()"></select>
+  <div id="mtTable"></div>
+  <button onclick="openNwh()" class="secondary">Back to NWH</button>
+</div>
+
 <!-- Restore -->
 <div id="restore" class="screen">
   <h2>Restore</h2>
@@ -656,7 +669,7 @@ table.rd tr { cursor: pointer; }
     <button class="secondary" onclick="clEdAdd()">＋ Add item</button>
     <button onclick="clEdSave()">Save Checklist</button>
     <button class="danger" onclick="clEdReset()">Reset to defaults</button>
-    <div class="btn-row"><button class="small secondary" onclick="showScreen('readings')">📈 Readings history</button><button class="small secondary" onclick="showScreen('aocs')">⚠️ AOC list</button></div>
+    <div class="btn-row"><button class="small secondary" onclick="showScreen('readings')">📈 Readings history</button><button class="small secondary" onclick="showScreen('meters')">📟 Meter history</button><button class="small secondary" onclick="showScreen('aocs')">⚠️ AOC list</button></div>
   </div>
   <div class="card">
     <h3>🧾 Business</h3>
@@ -665,7 +678,7 @@ table.rd tr { cursor: pointer; }
     <button class="secondary" onclick="showScreen('backup')">Backup &amp; Example Data</button>
   </div>
   <button class="danger" onclick="lockApp()">Lock App</button>
-  <p class="muted" style="text-align:center">Hopps Invoices v4 · all data stays on this device</p>
+  <p class="muted" style="text-align:center">Hopp v4.4 · all data stays on this device</p>
 </div>
 
 <!-- Invoice history -->
@@ -943,7 +956,7 @@ function loadProfile() {
   const saved = localStorage.getItem('hoppsProfile');
   if (saved) { try { profile = Object.assign({}, profile, JSON.parse(saved)); } catch (e) { /* damaged profile: keep defaults */ } }
   catalogue = load('hoppsCatalogue', JSON.parse(JSON.stringify(defaultCatalogue)));
-  document.getElementById('bizNameHeader').textContent = 'Hopps';
+  document.getElementById('bizNameHeader').textContent = 'Hopp';
 }
 function saveProfile() {
   // Dual verification: PIN + typed SAVE are both required.
@@ -970,7 +983,7 @@ function saveProfile() {
   profile.maint = parseFloat(document.getElementById('pMaint').value) || 0;
   profile.rate = parseFloat(document.getElementById('pRate').value) || 0;
   localStorage.setItem('hoppsProfile', JSON.stringify(profile));
-  document.getElementById('bizNameHeader').textContent = 'Hopps';
+  document.getElementById('bizNameHeader').textContent = 'Hopp';
   toast('Profile saved');
   showScreen('more');
   return true;
@@ -1013,7 +1026,8 @@ function showScreen(id) {
   if (id === 'restore') renderRestore();
   updateSaveUI();
   if (id === 'readings') renderReadings();
-  const tabFor = { restore: 'more', calendar: 'calendar', dayEditor: 'calendar', notes: 'notes', more: 'more', aocs: 'nwh', aocEdit: 'nwh', readings: 'nwh', profile: 'more', backup: 'more', catalogEditor: 'more' };
+  if (id === 'meters') renderMeters();
+  const tabFor = { restore: 'more', calendar: 'calendar', dayEditor: 'calendar', notes: 'notes', more: 'more', aocs: 'nwh', aocEdit: 'nwh', readings: 'nwh', meters: 'nwh', profile: 'more', backup: 'more', catalogEditor: 'more' };
   let tab = tabFor[id] || 'menu';
   if (tab === 'calendar' && nwhView) tab = 'nwh';
   document.querySelectorAll('#tabBar button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
@@ -1606,6 +1620,25 @@ function migrateData() {
   const v = load('hoppsSchema', 0);
   if (v < 4) migrateV4();
   if (v < 5) migrateV5();
+  if (v < 6) migrateV6();
+}
+// v4.4: new ordered NWH checklist. Old recorded entries stay in each day under their old ids.
+function migrateV6() {
+  const s = load('hoppsSettings', {});
+  if (Array.isArray(s.checklist)) {
+    const oldIds = LEGACY_CHECKLIST.map(i => i.id);
+    const fresh = JSON.parse(JSON.stringify(DEFAULT_CHECKLIST));
+    // carry normal ranges from the old chemical tests over to the water sample check
+    const ws = fresh.find(i => i.id === 'wscheck');
+    s.checklist.filter(i => i.id === 'b1chem' || i.id === 'b2chem').forEach(old => (old.fields || []).forEach(f => {
+      const nf = ws.fields.find(x => x.key === old.id.slice(0, 2) + f.key);
+      if (nf) { if (f.min != null && f.min !== '') nf.min = f.min; if (f.max != null && f.max !== '') nf.max = f.max; }
+    }));
+    const custom = s.checklist.filter(i => !oldIds.includes(i.id) && !fresh.some(f => f.id === i.id));
+    s.checklist = [...fresh, ...custom];
+    store('hoppsSettings', s);
+  }
+  store('hoppsSchema', 6);
 }
 // v4.2: boiler-log chemical tests and blowdowns now live in the daily checklist
 function migrateV5() {
@@ -2144,15 +2177,64 @@ function clearDay() {
 }
 
 /* ---------- Daily checklist ---------- */
+const meterItem = (id, label, dec) => ({ id, label, meter: true, fields: [{ key: 'reading', label: 'Reading', unit: dec ? 'hrs' : '', type: 'meter', dec: !!dec }] });
+const chemFields = b => [{ key: b + 'sulfite', label: `B${b.slice(1)} Sulfite`, unit: 'ppm', type: 'number' }, { key: b + 'ph', label: `B${b.slice(1)} pH`, unit: '', type: 'number' }, { key: b + 'cond', label: `B${b.slice(1)} Conductivity`, unit: 'µS/cm', type: 'number' }];
+// v4.4: ordered "order of operations" for the NWH boiler shift
 const DEFAULT_CHECKLIST = [
-  { id: 'meter', label: 'Meter reading', fields: [{ key: 'reading', label: 'Reading', unit: '', type: 'number' }] },
-  { id: 'b1sys', label: 'Boiler 1 systems check', fields: [] },
-  { id: 'b2sys', label: 'Boiler 2 systems check', fields: [] },
-  { id: 'b1chem', label: 'Boiler 1 chemical tests', fields: [{ key: 'sulfite', label: 'Sulfite', unit: 'ppm', type: 'number' }, { key: 'ph', label: 'pH', unit: '', type: 'number' }, { key: 'cond', label: 'Conductivity', unit: 'µS/cm', type: 'number' }] },
-  { id: 'b2chem', label: 'Boiler 2 chemical tests', fields: [{ key: 'sulfite', label: 'Sulfite', unit: 'ppm', type: 'number' }, { key: 'ph', label: 'pH', unit: '', type: 'number' }, { key: 'cond', label: 'Conductivity', unit: 'µS/cm', type: 'number' }] },
-  { id: 'overall', label: 'Overall system check', fields: [] },
-  { id: 'blowdown', label: 'Blowdown cycle', fields: [{ key: 'time', label: 'Time', unit: '', type: 'time' }] }
+  { id: 'evap', label: 'Fill Evap Tank', fields: [] },
+  { id: 'samples', label: 'Collect water samples', fields: [] },
+  meterItem('gas', 'Gas meter reading'),
+  meterItem('b2gas', 'Boiler 2 Gas Meter'),
+  meterItem('daybin', 'Day bin cycle meter'),
+  meterItem('b2hrs', 'Boiler 2 hour meter', true),
+  meterItem('b1hrs', 'Boiler 1 hour meter', true),
+  meterItem('scrubhrs', 'Scrubber hour meter', true),
+  meterItem('water', 'Water meter'),
+  { id: 'b1check', label: 'Boiler 1 system check', fields: [] },
+  { id: 'b2check', label: 'Boiler 2 system check', fields: [] },
+  { id: 'wscheck', label: 'Water sample check', fields: [...chemFields('b1'), ...chemFields('b2')] }
 ];
+// v4.2 default items: no longer on the checklist, but their recorded data is kept and shown in history
+const LEGACY_CHECKLIST = [
+  { id: 'meter', label: 'Meter reading (old)', meter: true, fields: [{ key: 'reading', label: 'Reading', unit: '', type: 'meter', dec: true }] },
+  { id: 'b1sys', label: 'Boiler 1 systems check (old)', fields: [] },
+  { id: 'b2sys', label: 'Boiler 2 systems check (old)', fields: [] },
+  { id: 'b1chem', label: 'Boiler 1 chemical tests (old)', fields: [{ key: 'sulfite', label: 'Sulfite', unit: 'ppm', type: 'number' }, { key: 'ph', label: 'pH', unit: '', type: 'number' }, { key: 'cond', label: 'Conductivity', unit: 'µS/cm', type: 'number' }] },
+  { id: 'b2chem', label: 'Boiler 2 chemical tests (old)', fields: [{ key: 'sulfite', label: 'Sulfite', unit: 'ppm', type: 'number' }, { key: 'ph', label: 'pH', unit: '', type: 'number' }, { key: 'cond', label: 'Conductivity', unit: 'µS/cm', type: 'number' }] },
+  { id: 'overall', label: 'Overall system check (old)', fields: [] },
+  { id: 'blowdown', label: 'Blowdown cycle (old)', fields: [{ key: 'time', label: 'Time', unit: '', type: 'time' }] }
+];
+const allItemDefs = () => { const cur = getChecklist(); return [...cur, ...LEGACY_CHECKLIST.filter(l => !cur.some(c => c.id === l.id))]; };
+const meterKey = it => { const f = it && it.fields.find(x => x.type === 'meter'); return f ? f.key : 'reading'; };
+const isMeter = it => !!(it && (it.meter || it.fields.some(f => f.type === 'meter')));
+function cleanMeter(v, dec) {
+  v = String(v).replace(dec ? /[^0-9.]/g : /[^0-9]/g, '');
+  if (dec) { const k = v.indexOf('.'); if (k >= 0) v = v.slice(0, k + 1) + v.slice(k + 1).replace(/\./g, '').slice(0, 1); }
+  return v;
+}
+function meterInput(el, dec) { const v = cleanMeter(el.value, dec); if (v !== el.value) el.value = v; }
+const mRound = n => Math.round(n * 100) / 100;
+const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
+// Previous reading (most recent earlier day with a value), today's value and usage.
+function meterInfo(id, day, W, key) {
+  W = W || getWork(); key = key || 'reading';
+  const val = k => { const r = W[k] && W[k].checklist && W[k].checklist[id]; return r && r.values && r.values[key] != null && r.values[key] !== '' ? Number(r.values[key]) : null; };
+  const today = val(day);
+  const prevDay = Object.keys(W).filter(k => k < day && val(k) != null).sort().pop();
+  const prev = prevDay ? val(prevDay) : null;
+  const info = { today, prev, prevDay, days: prevDay ? daysBetween(prevDay, day) : null, usage: null };
+  if (today != null && prev != null) info.usage = mRound(today - prev);
+  return info;
+}
+function meterUsageHtml(id, day, key) {
+  const m = meterInfo(id, day, null, key);
+  const short = k => parseYmd(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const prev = m.prevDay ? `Prev <b>${m.prev}</b> <small>(${short(m.prevDay)})</small>` : '<span class="muted">No earlier reading</span>';
+  const today = `Today <b>${m.today != null ? m.today : '—'}</b>`;
+  let use = '';
+  if (m.usage != null) use = `Usage <b class="${m.usage < 0 ? 'neg' : ''}">${m.usage}</b>${m.days > 1 ? ` <small>over ${m.days} days (${mRound(m.usage / m.days)}/day)</small>` : ''}${m.usage < 0 ? ' <small class="neg">⚠ negative: rollover or typo?</small>' : ''}`;
+  return [prev, today, use].filter(Boolean).join(' · ');
+}
 const getChecklist = () => getSettings().checklist;
 const outOfRange = (f, v) => f.type !== 'time' && v !== '' && v != null && !isNaN(v) && ((f.min !== undefined && f.min !== '' && Number(v) < Number(f.min)) || (f.max !== undefined && f.max !== '' && Number(v) > Number(f.max)));
 function checklistProgress(day, W) {
@@ -2166,29 +2248,43 @@ function checklistHtml(day) {
   return `<div class="cl" data-cl="${day}">
     <div class="cl-head"><b>✅ Daily checklist</b><span class="cl-prog">${done}/${total}</span></div>
     <div class="progress"><i style="width:${total ? Math.round(done / total * 100) : 0}%"></i></div>
-    ${items.map(it => {
+    ${items.map((it, n) => {
       const r = cl[it.id] || {}, vals = r.values || {};
       return `<div class="cl-item${r.done ? ' done' : ''}" data-item="${it.id}">
-        <div class="cl-top"><label class="check"><input type="checkbox" ${r.done ? 'checked' : ''} onchange="clSet(this,'${day}','${it.id}','done')"> ${esc(it.label)}</label>
+        <div class="cl-top"><label class="check"><input type="checkbox" ${r.done ? 'checked' : ''} onchange="clSet(this,'${day}','${it.id}','done')"> <span class="cl-n">${n + 1}.</span> ${esc(it.label)}</label>
         <span class="muted cl-at">${r.done && r.at ? '✓ ' + new Date(r.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</span></div>
         ${it.fields.length ? `<div class="cl-fields">${it.fields.map(f => `<label class="cl-f">${esc(f.label)}${f.unit ? ` <small>(${esc(f.unit)})</small>` : ''}
-          <input type="${f.type === 'time' ? 'time' : 'number'}" step="any" inputmode="decimal" value="${esc(vals[f.key] != null ? vals[f.key] : '')}" class="${outOfRange(f, vals[f.key]) ? 'oor' : ''}" data-field="${f.key}" onchange="clSet(this,'${day}','${it.id}','value','${f.key}')"></label>`).join('')}</div>` : ''}
+          ${f.type === 'meter' ? `<input type="text" inputmode="decimal" autocomplete="off" pattern="[0-9.]*" oninput="meterInput(this,${!!f.dec})" value="${esc(vals[f.key] != null ? vals[f.key] : '')}" class="${outOfRange(f, vals[f.key]) ? 'oor' : ''}" data-field="${f.key}" onchange="clSet(this,'${day}','${it.id}','value','${f.key}')"></label>` : `<input type="${f.type === 'time' ? 'time' : 'number'}" step="any" inputmode="decimal" value="${esc(vals[f.key] != null ? vals[f.key] : '')}" class="${outOfRange(f, vals[f.key]) ? 'oor' : ''}" data-field="${f.key}" onchange="clSet(this,'${day}','${it.id}','value','${f.key}')"></label>`}`).join('')}</div>` : ''}
+        ${isMeter(it) ? `<div class="mu" data-mu="${it.id}">${meterUsageHtml(it.id, day, meterKey(it))}</div>` : ''}
         <input class="cl-note" placeholder="Note (optional)" value="${esc(r.note || '')}" onchange="clSet(this,'${day}','${it.id}','note')">
       </div>`;
     }).join('')}
+    ${legacyChecklistHtml(day, items, cl)}
   </div>`;
+}
+// Data recorded under items that are no longer on the checklist (kept, read-only)
+function legacyChecklistHtml(day, items, cl) {
+  const defs = allItemDefs();
+  const rows = Object.entries(cl).filter(([id]) => !items.some(i => i.id === id)).map(([id, r]) => {
+    const it = defs.find(d => d.id === id) || { label: id, fields: [] };
+    const vals = Object.entries(r.values || {}).map(([k, v]) => { const f = it.fields.find(x => x.key === k); return `${f ? f.label : k} ${v}${f && f.unit ? ' ' + f.unit : ''}`; }).join(', ');
+    return `<li>${r.done ? '✓ ' : ''}<b>${esc(it.label)}</b>${vals ? ': ' + esc(vals) : ''}${r.note ? ' — ' + esc(r.note) : ''}</li>`;
+  });
+  return rows.length ? `<details class="cl-legacy"><summary class="muted">Earlier checklist items (${rows.length})</summary><ul>${rows.join('')}</ul></details>` : '';
 }
 // Saves one checklist change immediately and updates the UI in place (keeps keyboard focus).
 function clSet(el, day, id, what, key) {
   const W = getWork(), e = W[day] || {};
   e.checklist = e.checklist || {};
   const r = e.checklist[id] || {};
-  const item = getChecklist().find(i => i.id === id) || { fields: [] };
+  const item = allItemDefs().find(i => i.id === id) || { fields: [] };
   if (what === 'done') { r.done = el.checked; if (el.checked) r.at = new Date().toISOString(); else delete r.at; }
   if (what === 'value') {
     r.values = r.values || {};
     const f = item.fields.find(x => x.key === key) || {};
-    if (el.value === '') delete r.values[key]; else r.values[key] = f.type === 'time' ? el.value : Number(el.value);
+    if (f.type === 'meter') { el.value = cleanMeter(el.value, f.dec); if (el.value === '.') el.value = ''; }
+    if (el.value === '' || (f.type !== 'time' && isNaN(Number(el.value)))) delete r.values[key]; else r.values[key] = f.type === 'time' ? el.value : Number(el.value);
+    if (r.values[key] != null && !r.done) { r.done = true; r.at = new Date().toISOString(); } // a saved value checks the item
     el.classList.toggle('oor', outOfRange(f, r.values[key]));
     if (!Object.keys(r.values).length) delete r.values;
   }
@@ -2203,7 +2299,7 @@ function clSet(el, day, id, what, key) {
     box.querySelector('.cl-prog').textContent = `${p.done}/${p.total}`;
     box.querySelector('.progress i').style.width = (p.total ? Math.round(p.done / p.total * 100) : 0) + '%';
     const it = box.querySelector(`.cl-item[data-item="${id}"]`);
-    if (it) { it.classList.toggle('done', !!r.done); it.querySelector('.cl-at').textContent = r.done && r.at ? '✓ ' + new Date(r.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''; if (box !== el.closest('.cl')) it.querySelector('input[type=checkbox]').checked = !!r.done; }
+    if (it) { it.classList.toggle('done', !!r.done); it.querySelector('.cl-at').textContent = r.done && r.at ? '✓ ' + new Date(r.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''; it.querySelector('input[type=checkbox]').checked = !!r.done; const mu = it.querySelector('.mu'); if (mu) mu.innerHTML = meterUsageHtml(id, day, meterKey(item)); }
   });
   updateClockProgress();
   // refresh that day's calendar dots without re-rendering (keeps focus)
@@ -2233,13 +2329,14 @@ function clEdRender() {
       ${it.fields.map((f, j) => `<div class="cl-ed-field">
         <input value="${esc(f.label)}" placeholder="Value name" onchange="clDraft[${i}].fields[${j}].label=this.value">
         <input value="${esc(f.unit || '')}" placeholder="Unit" onchange="clDraft[${i}].fields[${j}].unit=this.value">
-        <select onchange="clDraft[${i}].fields[${j}].type=this.value"><option value="number"${f.type !== 'time' ? ' selected' : ''}>Number</option><option value="time"${f.type === 'time' ? ' selected' : ''}>Time</option></select>
+        <select onchange="clFieldType(${i},${j},this.value)"><option value="number"${f.type === 'number' || !f.type ? ' selected' : ''}>Number</option><option value="meter"${f.type === 'meter' && !f.dec ? ' selected' : ''}>Meter (digits)</option><option value="meterdec"${f.type === 'meter' && f.dec ? ' selected' : ''}>Meter (1 decimal)</option><option value="time"${f.type === 'time' ? ' selected' : ''}>Time</option></select>
         <input type="number" step="any" value="${f.min != null ? f.min : ''}" placeholder="Min" onchange="clDraft[${i}].fields[${j}].min=this.value===''?undefined:Number(this.value)">
         <input type="number" step="any" value="${f.max != null ? f.max : ''}" placeholder="Max" onchange="clDraft[${i}].fields[${j}].max=this.value===''?undefined:Number(this.value)">
         <button class="small danger" onclick="clDraft[${i}].fields.splice(${j},1);clEdRender()" aria-label="Remove value field">✕</button></div>`).join('')}
       <button class="small secondary" onclick="clDraft[${i}].fields.push({key:'f'+Date.now().toString(36),label:'Value',unit:'',type:'number'});clEdRender()">＋ Value field</button>
     </div>`).join('');
 }
+function clFieldType(i, j, v) { const f = clDraft[i].fields[j]; f.type = v === 'meterdec' ? 'meter' : v; f.dec = v === 'meterdec'; clDraft[i].meter = clDraft[i].fields.some(x => x.type === 'meter'); }
 function clEdMove(i, d) { const j = i + d; if (j < 0 || j >= clDraft.length) return; [clDraft[i], clDraft[j]] = [clDraft[j], clDraft[i]]; clEdRender(); }
 function clEdAdd() {
   const name = document.getElementById('clNewItem').value.trim(); if (!name) return;
@@ -2257,7 +2354,8 @@ function clEdReset() {
 
 /* Readings history */
 function renderReadings() {
-  const items = getChecklist().filter(it => it.fields.length);
+  const W0 = getWork();
+  const items = allItemDefs().filter(it => it.fields.length && (getChecklist().includes(it) || Object.values(W0).some(w => w.checklist && w.checklist[it.id])));
   const sel = document.getElementById('rdItem');
   const cur = sel.value;
   sel.innerHTML = items.map(it => `<option value="${it.id}">${esc(it.label)}</option>`).join('');
@@ -2271,6 +2369,37 @@ function renderReadings() {
     <tr><th>Date</th>${it.fields.map(f => `<th>${esc(f.label)}${f.unit ? ` <small>(${esc(f.unit)})</small>` : ''}${rng(f)}</th>`).join('')}</tr>
     ${days.map(k => { const v = W[k].checklist[it.id].values; return `<tr onclick="openDay('${k}','work')"><td>${parseYmd(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${W[k].isExample ? ' <span class="badge ex">EX</span>' : ''}</td>${it.fields.map(f => `<td class="${outOfRange(f, v[f.key]) ? 'oor' : ''}">${v[f.key] != null ? esc(v[f.key]) : '—'}</td>`).join('')}</tr>`; }).join('')}
   </table></div><p class="muted">Newest first. Red = outside the normal range set in More → Daily checklist. Tap a row to open that day.</p>` : '<p class="muted">No readings recorded yet for this item.</p>';
+}
+
+/* Meter history: readings, usage, 7/30-day averages */
+function meterSeries(id, W, key) {
+  W = W || getWork(); key = key || 'reading';
+  const days = Object.keys(W).filter(k => { const r = W[k].checklist && W[k].checklist[id]; return r && r.values && r.values[key] != null; }).sort();
+  return days.map((k, n) => {
+    const v = Number(W[k].checklist[id].values[key]), p = n ? days[n - 1] : null;
+    return { day: k, value: v, prevDay: p, usage: p ? mRound(v - Number(W[p].checklist[id].values[key])) : null, days: p ? daysBetween(p, k) : null, isExample: !!W[k].isExample };
+  });
+}
+function meterAvg(series, n, today) {
+  const from = ymd(new Date(parseYmd(today || ymd(new Date())).getTime() - n * 86400000));
+  const pts = series.filter(x => x.usage != null && x.usage >= 0 && x.day > from && x.day <= (today || ymd(new Date())));
+  const days = pts.reduce((a, x) => a + x.days, 0);
+  return days ? { avg: mRound(pts.reduce((a, x) => a + x.usage, 0) / days), n: pts.length } : null;
+}
+function renderMeters() {
+  const W = getWork();
+  const items = allItemDefs().filter(it => isMeter(it) && (getChecklist().includes(it) || meterSeries(it.id, W, meterKey(it)).length));
+  const sel = document.getElementById('mtItem'), cur = sel.value;
+  sel.innerHTML = items.map(it => `<option value="${it.id}">${esc(it.label)}</option>`).join('');
+  if (items.some(it => it.id === cur)) sel.value = cur;
+  const it = items.find(x => x.id === sel.value), out = document.getElementById('mtTable');
+  if (!it) { out.innerHTML = '<p class="muted">No meter items. Add a Meter value field in More → Daily checklist.</p>'; return; }
+  const ser = meterSeries(it.id, W, meterKey(it)), unit = it.fields[0] && it.fields[0].unit ? ' ' + esc(it.fields[0].unit) : '';
+  const a7 = meterAvg(ser, 7), a30 = meterAvg(ser, 30);
+  const avg = (a, n) => `<div class="stat"><div class="v">${a ? a.avg : '—'}</div><small>${n}-day avg/day${a ? ` · ${a.n} reading${a.n === 1 ? '' : 's'}` : ''}</small></div>`;
+  out.innerHTML = `<div class="stats-row">${avg(a7, 7)}${avg(a30, 30)}</div>` + (ser.length ? `<div class="table-wrap"><table class="rd"><tr><th>Date</th><th>Reading${unit}</th><th>Usage</th><th>Days</th></tr>
+    ${ser.slice().reverse().slice(0, 45).map(x => `<tr onclick="openDay('${x.day}','work')"><td>${parseYmd(x.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${x.isExample ? ' <span class="badge ex">EX</span>' : ''}</td><td>${x.value}</td><td class="${x.usage < 0 ? 'oor' : ''}">${x.usage == null ? '—' : x.usage}</td><td>${x.days == null ? '' : x.days}</td></tr>`).join('')}
+  </table></div><p class="muted">Newest first. Usage = reading minus the previous reading. Red = negative (rollover or typo); negative usage is left out of averages. Tap a row to open that day.</p>` : '<p class="muted">No readings yet for this meter.</p>');
 }
 
 /* ---------- Abnormal Operating Conditions (AOCs) ---------- */
@@ -2362,7 +2491,7 @@ function nwhCardsHtml() {
   const open = aocSort(getAocs().filter(a => a.status !== 'Resolved'));
   return {
     checklist: `<div class="cl-title"><b>Today · ${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</b>
-      <button class="small secondary" onclick="showScreen('readings')">📈 Readings</button></div>` + checklistHtml(today),
+      <span><button class="small secondary" onclick="showScreen('meters')">📟 Meters</button> <button class="small secondary" onclick="showScreen('readings')">📈 Readings</button></span></div>` + checklistHtml(today),
     aocs: `<h3>⚠️ Abnormal Operating Conditions (AOCs)</h3>
       ${open.length ? open.slice(0, 4).map(aocCard).join('') : '<p class="muted">No open AOCs.</p>'}
       <div class="btn-row"><button class="small danger" onclick="openAoc(null, null, 'calendar')">＋ New AOC</button>
@@ -2385,7 +2514,7 @@ function noteItems(mode, includeAll) {
     const c = calc[k] || {};
     const b = w.boiler || {};
     const boiler = [['Pressure', b.pressure && b.pressure + ' psi'], ['Water', b.water], ['Fuel', b.fuel], ['Incident/maint', b.incidents]].filter(x => x[1]).map(x => x.join(': '));
-    const clItems = getChecklist();
+    const clItems = allItemDefs();
     const cl = Object.entries(w.checklist || {}).map(([id, r]) => {
       const it = clItems.find(i => i.id === id); if (!it) return '';
       const vals = it.fields.filter(f => r.values && r.values[f.key] != null).map(f => `${f.label} ${r.values[f.key]}${f.unit ? ' ' + f.unit : ''}`).join(', ');
@@ -2633,7 +2762,7 @@ function restoreFromFile(inputId, msgId) {
     try {
       let parsed;
       try { parsed = JSON.parse(reader.result); } catch (e) { throw new Error('File is not valid JSON'); }
-      if (!parsed || parsed.app !== 'hopps-invoices' || typeof parsed.data !== 'object') throw new Error('Not a Hopps backup file');
+      if (!parsed || parsed.app !== 'hopps-invoices' || typeof parsed.data !== 'object') throw new Error('Not a Hopp backup file');
       if (!confirm('Replace all data on this device with the backup from ' + (parsed.exported || 'unknown date') + '?\nYour current data is snapshotted first.')) return;
       await takeSnapshot('pre-restore', true);
       applyData(parsed.data);
@@ -2680,7 +2809,7 @@ async function saveFile(saveAs) {
     if (window.showSaveFilePicker) {
       // File System Access API: keep a handle and save over the same file
       if (saveAs || !fileHandle) {
-        fileHandle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Hopps backup', accept: { 'application/json': ['.json'] } }] });
+        fileHandle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Hopp backup', accept: { 'application/json': ['.json'] } }] });
         metaPut('fileHandle', fileHandle).catch(() => {});
       } else if (fileHandle.queryPermission && (await fileHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
         if ((await fileHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('Permission to the file was denied');
@@ -3034,6 +3163,17 @@ function loadExamples() {
     [d(-9)]: shift('22:00', '06:00', { shift: 'Night', notes: 'Example: covered night shift for a coworker.', pinned: true, tags: ['coverage'] }),
     [d(-10)]: shift('06:00', '14:00', { dayType: 'OT', notes: 'Example: Saturday call-in, all hours OT.' })
   };
+  // Realistic, steadily increasing meter readings on the worked example days (gap over the PTO day)
+  const mBase = { gas: [512340, 1450], b2gas: [208115, 620], daybin: [18342, 38], b2hrs: [15234.6, 23.5], b1hrs: [22871.3, 24], scrubhrs: [9043.2, 16.4], water: [734210, 2900] };
+  const jit = [0, 3, -2, 5, 1, -4, 2, 0, 6, -1, 3];
+  const allIds = DEFAULT_CHECKLIST.map(i => i.id);
+  [-10, -9, -5, -4, -3, -2, -1].forEach(k => {
+    const n = k + 10, vals = {};
+    Object.entries(mBase).forEach(([id, [b, rate]], m) => { vals[id] = { reading: mRound(b + rate * n + (rate > 100 ? jit[(n + m) % 11] * 10 : rate < 30 ? jit[(n + m) % 11] / 10 : jit[(n + m) % 11])) }; });
+    vals.wscheck = { b1sulfite: 30 + jit[n % 11], b1ph: 11.1, b1cond: 2800 + jit[n % 11] * 20, b2sulfite: 28 - jit[(n + 2) % 11], b2ph: 10.9, b2cond: k === -1 ? 3720 : 3000 + jit[(n + 3) % 11] * 25 };
+    const done = k === -2 ? allIds.slice(0, 7) : allIds;
+    workEx[d(k)].checklist = exCl(done, vals, k === -1 ? { wscheck: 'Example: B2 conductivity high, increased blowdown' } : {});
+  });
   Object.entries(workEx).forEach(([k, v]) => { if (!W[k]) W[k] = v; });
   store('hoppsWork', W);
   // Personal examples

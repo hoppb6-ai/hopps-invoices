@@ -1,7 +1,7 @@
 {
-  "name": "Hopps Invoices",
-  "short_name": "Invoices",
-  "description": "Local invoice builder for Hopps Handyman Services",
+  "name": "Hopp",
+  "short_name": "Hopp",
+  "description": "Hopp: work log, checklists, invoices and quotes, all on your device",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FFF8F0",

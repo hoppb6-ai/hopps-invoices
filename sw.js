@@ -1,4 +1,4 @@
-const CACHE = 'hopps-invoices-v7';
+const CACHE = 'hopps-invoices-v8';
 const ASSETS = [
   './',
   './index.html',

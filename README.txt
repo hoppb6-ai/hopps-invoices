@@ -1,4 +1,4 @@
-# Hopps Invoices App
+# Hopp (formerly Hopps Invoices)
 
 Self-contained local invoice builder. No internet required after first load. No accounts. No servers.
 
@@ -6,7 +6,7 @@ Self-contained local invoice builder. No internet required after first load. No 
 
 1. Open the hosted URL in Safari.
 2. Tap the Share button → Add to Home Screen.
-3. Name it "Invoices" or "Hopps".
+3. Name it "Hopp".
 4. Open the icon. Enter PIN: 5295
 
 Edit the profile first to put your real info in.
@@ -37,7 +37,7 @@ Edit the profile first to put your real info in.
 
 ## Version 4.1
 - New NWH tab (Northwest Hardwoods): opens the Work calendar on today with Clock in/out and the pay-period summary at the top. Change the tab's short name in More, next to the employer.
-- Quick add is now the "+ Add" button next to Today. The header shows a short "Hopps" title.
+- Quick add is now the "+ Add" button next to Today. The header shows a short "Hopp" title.
 
 ## Version 4.2
 - AOCs (Abnormal Operating Conditions): log date/time, equipment (Boiler 1, Boiler 2, Both, Other), title, Probable vs Actual, severity, actions, status and resolved date, plus tags. Open the full searchable list from the NWH tab. AOCs show as a diamond marker on the calendar (red = high and still open).
@@ -50,3 +50,11 @@ v4.3 — Data safety
 - More → Restore: restore any snapshot or a backup file. Current data is snapshotted first.
 - On startup, if saved data is damaged or missing and snapshots exist, the app offers to restore the latest one.
 - Reminder banner if no backup file has been saved in 3+ days (dismissible).
+
+v4.4
+- App renamed "Hopp" (title, home-screen name, PIN screen, header). Invoices still show the business name from the profile.
+- New ordered NWH daily checklist (numbered): Fill Evap Tank, Collect water samples, 7 meters (gas, Boiler 2 gas, day bin cycle, Boiler 2/Boiler 1/Scrubber hour meters, water), Boiler 1 and 2 system checks, Water sample check (optional sulfite/pH/conductivity for each boiler). Blowdown item removed.
+- Meter fields take digits only (hour meters allow one decimal). Entering a value checks the item.
+- Each meter shows the previous reading (with its date), today's reading and daily usage (with the number of days when there's a gap). Negative usage is shown in red.
+- Meter history (NWH → Meters): readings, usage and 7/30-day average per day.
+- Upgrade: the old default items are replaced. Values already recorded under them are kept, shown under "Earlier checklist items" on that day and in Readings history. Custom items are kept.
