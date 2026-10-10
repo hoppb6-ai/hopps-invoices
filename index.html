@@ -204,6 +204,20 @@ details.boiler summary { font-weight: 700; cursor: pointer; }
 .tag { display: inline-block; font-size: 12px; color: var(--blue); background: #E8EEF5; border-radius: 8px; padding: 1px 6px; margin-top: 4px; }
 .shift-l { flex: 0 0 56px !important; align-self: center; font-weight: 600; color: #555; }
 .note-item { cursor: pointer; }
+.ss-wrap { overflow: auto; max-height: 62vh; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid #eee; background: #fff; }
+table.ss { border-collapse: separate; border-spacing: 0; font-size: 13px; white-space: nowrap; }
+table.ss th, table.ss td { padding: 6px 8px; text-align: right; border-bottom: 1px solid #f0e6dc; }
+table.ss thead th { position: sticky; top: 0; background: var(--orange); color: #fff; z-index: 2; height: 18px; }
+table.ss thead tr.h2 th { top: 31px; font-weight: 600; font-size: 12px; }
+table.ss th.grp { text-align: center; border-left: 1px solid rgba(255,255,255,.4); }
+table.ss .dc { position: sticky; left: 0; text-align: left; background: #fff; z-index: 1; font-weight: 600; }
+table.ss thead .dc.corner { z-index: 3; background: var(--orange); }
+table.ss tbody tr:nth-child(even) td, table.ss tbody tr:nth-child(even) .dc { background: #FFF4EA; }
+table.ss td.oor { color: #c0392b; font-weight: 700; }
+table.ss td.na { color: #bbb; }
+table.ss small.gap { display: block; color: #888; font-size: 10px; }
+table.ss tfoot td, table.ss tfoot .dc { background: #F2E6DA; font-weight: 700; position: sticky; bottom: 0; }
+table.ss tfoot tr:first-child td, table.ss tfoot tr:first-child .dc { bottom: 29px; }
 .cl-n { color: var(--orange); font-weight: 800; min-width: 1.6em; display: inline-block; }
 .mu { font-size: .85rem; margin: 4px 0 2px; color: #444; }
 .neg { color: #c0392b !important; }
@@ -590,8 +604,19 @@ table.rd tr { cursor: pointer; }
 <!-- Meter history -->
 <div id="meters" class="screen">
   <h2>Meter history</h2>
-  <select id="mtItem" onchange="renderMeters()"></select>
-  <div id="mtTable"></div>
+  <div class="seg" id="mtSeg"><button data-v="list" class="on" onclick="setMtView('list')">By meter</button><button data-v="sheet" onclick="setMtView('sheet')">📊 Spreadsheet</button></div>
+  <div id="mtList">
+    <select id="mtItem" onchange="renderMeters()"></select>
+    <div id="mtTable"></div>
+  </div>
+  <div id="mtSheet" style="display:none">
+    <div class="row2"><select id="ssRange" onchange="renderSheet()"><option value="week">This week</option><option value="last7" selected>Last 7 days</option><option value="last30">Last 30 days</option><option value="month">This month</option><option value="pay">Pay period</option><option value="custom">Custom…</option></select>
+      <button class="small secondary" id="ssSort" onclick="ssToggleSort()">↓ Newest first</button></div>
+    <div class="row2" id="ssCustom" style="display:none"><label>From <input type="date" id="ssFrom" onchange="renderSheet()"></label><label>To <input type="date" id="ssTo" onchange="renderSheet()"></label></div>
+    <p class="muted" id="ssInfo"></p>
+    <div id="ssTable"></div>
+    <div class="btn-row"><button onclick="saveSheetPng()">🖼️ Save as PNG</button><button class="small secondary" onclick="copySheetCsv()">Copy CSV</button><button class="small secondary" onclick="downloadSheetCsv()">CSV file</button></div>
+  </div>
   <button onclick="openNwh()" class="secondary">Back to NWH</button>
 </div>
 
@@ -1026,7 +1051,7 @@ function showScreen(id) {
   if (id === 'restore') renderRestore();
   updateSaveUI();
   if (id === 'readings') renderReadings();
-  if (id === 'meters') renderMeters();
+  if (id === 'meters') { renderMeters(); if (mtView === 'sheet') renderSheet(); }
   const tabFor = { restore: 'more', calendar: 'calendar', dayEditor: 'calendar', notes: 'notes', more: 'more', aocs: 'nwh', aocEdit: 'nwh', readings: 'nwh', meters: 'nwh', profile: 'more', backup: 'more', catalogEditor: 'more' };
   let tab = tabFor[id] || 'menu';
   if (tab === 'calendar' && nwhView) tab = 'nwh';
@@ -2401,6 +2426,151 @@ function renderMeters() {
     ${ser.slice().reverse().slice(0, 45).map(x => `<tr onclick="openDay('${x.day}','work')"><td>${parseYmd(x.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${x.isExample ? ' <span class="badge ex">EX</span>' : ''}</td><td>${x.value}</td><td class="${x.usage < 0 ? 'oor' : ''}">${x.usage == null ? '—' : x.usage}</td><td>${x.days == null ? '' : x.days}</td></tr>`).join('')}
   </table></div><p class="muted">Newest first. Usage = reading minus the previous reading. Red = negative (rollover or typo); negative usage is left out of averages. Tap a row to open that day.</p>` : '<p class="muted">No readings yet for this meter.</p>');
 }
+
+/* Meter spreadsheet (NWH → Meters → Spreadsheet) */
+let mtView = 'list', ssDesc = true;
+function setMtView(v) {
+  mtView = v;
+  document.querySelectorAll('#mtSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  document.getElementById('mtList').style.display = v === 'list' ? '' : 'none';
+  document.getElementById('mtSheet').style.display = v === 'sheet' ? '' : 'none';
+  if (v === 'sheet') renderSheet();
+}
+function ssRange() {
+  const kind = document.getElementById('ssRange').value, today = ymd(new Date()), S = getSettings();
+  document.getElementById('ssCustom').style.display = kind === 'custom' ? '' : 'none';
+  const back = n => ymd(addDays(parseYmd(today), -n));
+  if (kind === 'week') return [weekStartKey(today, S.weekStart), today];
+  if (kind === 'last7') return [back(6), today];
+  if (kind === 'last30') return [back(29), today];
+  if (kind === 'month') return [today.slice(0, 8) + '01', today];
+  if (kind === 'pay') return payPeriodFor(today);
+  let f = document.getElementById('ssFrom').value || back(6), t = document.getElementById('ssTo').value || today;
+  if (f > t) [f, t] = [t, f];
+  return [f, t];
+}
+// Rows = days in range with any meter reading. Usage compares with the previous reading, even if it's before the range.
+function sheetData(from, to, desc) {
+  const W = getWork();
+  const meters = getChecklist().filter(isMeter).map(it => ({ id: it.id, label: it.label, key: meterKey(it), unit: (it.fields.find(f => f.type === 'meter') || {}).unit || '' }));
+  const has = (k, m) => { const r = W[k] && W[k].checklist && W[k].checklist[m.id]; return r && r.values && r.values[m.key] != null; };
+  let days = Object.keys(W).filter(k => k >= from && k <= to && meters.some(m => has(k, m))).sort();
+  const rows = days.map(day => ({ day, isExample: !!W[day].isExample, cells: meters.map(m => { if (!has(day, m)) return null; const i = meterInfo(m.id, day, W, m.key); return { v: i.today, usage: i.usage, days: i.days }; }) }));
+  const totals = meters.map((m, c) => {
+    const pts = rows.map(r => r.cells[c]).filter(x => x && x.usage != null && x.usage >= 0);
+    const total = mRound(pts.reduce((a, x) => a + x.usage, 0)), d = pts.reduce((a, x) => a + x.days, 0);
+    const neg = rows.filter(r => r.cells[c] && r.cells[c].usage < 0).length;
+    return { total: pts.length ? total : null, days: d, avg: d ? mRound(total / d) : null, neg };
+  });
+  if (desc) rows.reverse();
+  return { from, to, meters, rows, totals };
+}
+const ssDate = (k, y) => parseYmd(k).toLocaleDateString('en-US', Object.assign({ weekday: 'short', month: 'short', day: 'numeric' }, y ? { year: 'numeric' } : {}));
+const ssUse = c => c && c.usage != null ? (c.usage > 0 ? '+' : '') + c.usage : '—';
+function renderSheet() {
+  const [from, to] = ssRange();
+  const d = sheetData(from, to, ssDesc);
+  document.getElementById('ssSort').textContent = ssDesc ? '↓ Newest first' : '↑ Oldest first';
+  document.getElementById('ssInfo').textContent = `${ssDate(from, true)} – ${ssDate(to, true)} · ${d.rows.length} day${d.rows.length === 1 ? '' : 's'} with readings`;
+  const head1 = d.meters.map(m => `<th colspan="2" class="grp">${esc(m.label)}${m.unit ? ` <small>(${esc(m.unit)})</small>` : ''}</th>`).join('');
+  const head2 = d.meters.map(() => '<th>Reading</th><th>Usage</th>').join('');
+  const body = d.rows.map(r => `<tr onclick="openDay('${r.day}','work')"><th class="dc">${ssDate(r.day)}${r.isExample ? ' <span class="badge ex">EX</span>' : ''}</th>${r.cells.map(c => c ? `<td>${c.v}</td><td class="${c.usage < 0 ? 'oor' : ''}">${ssUse(c)}${c.days > 1 ? `<small class="gap">${c.days}-day gap</small>` : ''}</td>` : '<td class="na">—</td><td class="na"></td>').join('')}</tr>`).join('');
+  const foot = `<tr class="tot"><th class="dc">Total usage</th>${d.totals.map(t => `<td></td><td>${t.total == null ? '—' : t.total}</td>`).join('')}</tr>
+    <tr class="tot"><th class="dc">Avg / day</th>${d.totals.map(t => `<td></td><td>${t.avg == null ? '—' : t.avg}</td>`).join('')}</tr>`;
+  document.getElementById('ssTable').innerHTML = d.rows.length ? `<div class="ss-wrap"><table class="ss"><thead><tr><th class="dc corner" rowspan="2">Date</th>${head1}</tr><tr class="h2">${head2}</tr></thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>
+    <p class="muted">Usage = reading minus the previous reading (even if that was before this range). Red = negative (rollover or typo), left out of totals. Avg/day = total usage ÷ days covered.</p>` : '<p class="muted">No meter readings in this range.</p>';
+}
+function ssToggleSort() { ssDesc = !ssDesc; renderSheet(); }
+
+// PNG: same table drawn on canvas at 2x; splits into pages of 40 rows.
+const SS_ROWS_PER_PAGE = 40;
+function sheetCanvases(d) {
+  const S = getSettings(), scale = 2, dateW = 150, colW = 104, rowH = 30, pad = 24;
+  const W = pad * 2 + dateW + d.meters.length * colW * 2;
+  const pages = [];
+  for (let i = 0; i < Math.max(1, d.rows.length); i += SS_ROWS_PER_PAGE) pages.push(d.rows.slice(i, i + SS_ROWS_PER_PAGE));
+  return pages.map((rows, p) => {
+    const last = p === pages.length - 1, texts = [];
+    const H = pad + 96 + rowH * 2 + rows.length * rowH + (last ? rowH * 2 : 0) + 44;
+    const cv = document.createElement('canvas'); cv.width = W * scale; cv.height = H * scale;
+    const ctx = cv.getContext('2d'); ctx.scale(scale, scale);
+    const T = (s, x, y, font, color, align) => { s = String(s); ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.fillText(s, x, y); texts.push(s); };
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    T('NWH Meter Readings', pad, pad + 26, 'bold 26px Arial', '#222');
+    T(`${ssDate(d.from, true)} – ${ssDate(d.to, true)}${pages.length > 1 ? `   (page ${p + 1} of ${pages.length})` : ''}`, pad, pad + 52, '16px Arial', '#444');
+    T(`${S.employer || ''}${S.title ? ' · ' + S.title : ''}`, pad, pad + 74, '15px Arial', '#444');
+    T('Generated ' + new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }), W - pad, pad + 26, '13px Arial', '#777', 'right');
+    let y = pad + 96;
+    // orange header (2 rows)
+    ctx.fillStyle = '#FF6600'; ctx.fillRect(pad, y, W - pad * 2, rowH * 2);
+    T('Date', pad + 8, y + rowH + 5, 'bold 14px Arial', '#fff');
+    d.meters.forEach((m, i) => {
+      const x = pad + dateW + i * colW * 2;
+      ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(x, y + 4, 1, rowH * 2 - 8);
+      let lab = m.label + (m.unit ? ` (${m.unit})` : ''); ctx.font = 'bold 13px Arial';
+      while (ctx.measureText(lab).width > colW * 2 - 10 && lab.length > 4) lab = lab.slice(0, -2) + '…';
+      T(lab, x + colW, y + 20, 'bold 13px Arial', '#fff', 'center');
+      T('Reading', x + colW - 8, y + rowH + 20, '12px Arial', '#fff', 'right');
+      T('Usage', x + colW * 2 - 8, y + rowH + 20, '12px Arial', '#fff', 'right');
+    });
+    y += rowH * 2;
+    rows.forEach((r, n) => {
+      if (n % 2) { ctx.fillStyle = '#FFF4EA'; ctx.fillRect(pad, y, W - pad * 2, rowH); }
+      T(ssDate(r.day), pad + 8, y + 20, '14px Arial', '#222');
+      r.cells.forEach((c, i) => {
+        const x = pad + dateW + i * colW * 2;
+        if (!c) { T('—', x + colW - 8, y + 20, '14px Arial', '#bbb', 'right'); return; }
+        T(c.v, x + colW - 8, y + 20, '14px Arial', '#222', 'right');
+        T(ssUse(c) + (c.days > 1 ? ` (${c.days}d)` : ''), x + colW * 2 - 8, y + 20, (c.usage < 0 ? 'bold ' : '') + '14px Arial', c.usage < 0 ? '#c0392b' : '#3A5A80', 'right');
+      });
+      y += rowH;
+    });
+    if (last) {
+      [['Total usage', 'total'], ['Avg / day', 'avg']].forEach(([lab, k]) => {
+        ctx.fillStyle = '#F2E6DA'; ctx.fillRect(pad, y, W - pad * 2, rowH);
+        T(lab, pad + 8, y + 20, 'bold 14px Arial', '#222');
+        d.totals.forEach((t, i) => T(t[k] == null ? '—' : t[k], pad + dateW + i * colW * 2 + colW * 2 - 8, y + 20, 'bold 14px Arial', '#222', 'right'));
+        y += rowH;
+      });
+    }
+    ctx.fillStyle = '#ddd'; ctx.fillRect(pad, y, W - pad * 2, 1);
+    T('Usage = reading − previous reading; (Nd) = days since that reading; red = negative. Made with Hopp.', pad, y + 24, '12px Arial', '#888');
+    cv.texts = texts;
+    return cv;
+  });
+}
+async function shareOrDownload(files) {
+  try {
+    if (navigator.canShare && navigator.share && navigator.canShare({ files })) { await navigator.share({ files, title: files[0].name }); return 'shared'; }
+  } catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
+  files.forEach((f, i) => setTimeout(() => downloadBlob(f, f.name), i * 300));
+  return 'downloaded';
+}
+async function saveSheetPng() {
+  const [from, to] = ssRange();
+  const d = sheetData(from, to, ssDesc);
+  if (!d.rows.length) { toast('No readings in this range'); return; }
+  const cvs = sheetCanvases(d);
+  const base = `NWH-Meters-${from}_to_${to}`;
+  const files = await Promise.all(cvs.map((cv, i) => new Promise(res => cv.toBlob(b => res(new File([b], base + (cvs.length > 1 ? `_p${i + 1}` : '') + '.png', { type: 'image/png' }))))));
+  const how = await shareOrDownload(files);
+  if (how !== 'cancelled') toast(`Meter sheet ${how}${files.length > 1 ? ` (${files.length} pages)` : ''}`);
+}
+function sheetCsv() {
+  const [from, to] = ssRange();
+  const d = sheetData(from, to, ssDesc);
+  const q = s => /[",\n]/.test(String(s)) ? '"' + String(s).replace(/"/g, '""') + '"' : String(s);
+  const lines = [['Date', ...d.meters.flatMap(m => [m.label + ' reading', m.label + ' usage', m.label + ' days'])]];
+  d.rows.forEach(r => lines.push([r.day, ...r.cells.flatMap(c => c ? [c.v, c.usage == null ? '' : c.usage, c.days == null ? '' : c.days] : ['', '', ''])]));
+  lines.push(['Total usage', ...d.totals.flatMap(t => ['', t.total == null ? '' : t.total, t.days])]);
+  lines.push(['Avg per day', ...d.totals.flatMap(t => ['', t.avg == null ? '' : t.avg, ''])]);
+  return { csv: lines.map(l => l.map(q).join(',')).join('\n'), name: `NWH-Meters-${from}_to_${to}.csv` };
+}
+async function copySheetCsv() {
+  const { csv } = sheetCsv();
+  try { await navigator.clipboard.writeText(csv); toast('CSV copied'); } catch (e) { downloadSheetCsv(); }
+}
+function downloadSheetCsv() { const { csv, name } = sheetCsv(); downloadBlob(new Blob([csv], { type: 'text/csv' }), name); toast('CSV downloaded'); }
 
 /* ---------- Abnormal Operating Conditions (AOCs) ---------- */
 const getAocs = () => load('hoppsAocs', []);

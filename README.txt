@@ -58,3 +58,9 @@ v4.4
 - Each meter shows the previous reading (with its date), today's reading and daily usage (with the number of days when there's a gap). Negative usage is shown in red.
 - Meter history (NWH → Meters): readings, usage and 7/30-day average per day.
 - Upgrade: the old default items are replaced. Values already recorded under them are kept, shown under "Earlier checklist items" on that day and in Readings history. Custom items are kept.
+
+v4.5
+- NWH → Meters → Spreadsheet: one row per date that has readings (newest or oldest first), with Reading and Usage columns for every meter. The header and date column stay in place while you scroll sideways. Rows are shaded alternately, negative usage is red, and gaps are labeled.
+- Ranges: This week, Last 7, Last 30, This month, Pay period, Custom. The bottom rows show total usage and average per day for each meter.
+- Save as PNG ("NWH Meter Readings", date range, employer, generated time, orange header, 2x). Long ranges are split into pages of 40 rows. Uses the iPhone share sheet (Photos/Files) or downloads the file. Name: NWH-Meters-FROM_to_TO.png
+- Copy CSV / CSV file.
