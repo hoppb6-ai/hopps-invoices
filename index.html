@@ -138,6 +138,14 @@ label { font-size: 14px; font-weight: 600; color: #555; display: block; margin-t
 .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
 .bar { width: 100%; background: var(--orange); border-radius: 4px 4px 0 0; min-height: 2px; }
 .bar-lbl { font-size: 10px; color: #777; margin-top: 4px; }
+.badge.ex { background: white; color: var(--orange); border: 1px dashed var(--orange); }
+.ex-banner { display: none; background: #FFF1E0; border: 1px dashed var(--orange); color: #8a4b00; border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; align-items: center; gap: 8px; }
+.ex-banner.show { display: flex; }
+.ex-banner span { flex: 1; }
+.dot.sched { background: white; border: 2px solid var(--charcoal); width: 9px; height: 9px; }
+.row2 { display: flex; gap: 8px; }
+.row2 > * { flex: 1; }
+.timer { font-size: 32px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; color: var(--charcoal); }
 .hbar { height: 10px; background: var(--olive); border-radius: 5px; margin: 4px 0 10px; }
 
 canvas { display: none; }
@@ -163,16 +171,26 @@ canvas { display: none; }
 
 <!-- Main Menu -->
 <div id="menu" class="screen">
+  <div id="firstRunCard" class="card" style="display:none; border:2px solid var(--olive)">
+    <h3>👋 Welcome to Hopps Invoices</h3>
+    <p>Want to look around first? Load a few clearly-marked <b>example</b> invoices, quotes, jobs and calendar days. You can remove them anytime and your real data is never touched.</p>
+    <button class="olive" onclick="loadExamples()">Load example data</button>
+    <button class="secondary" onclick="dismissFirstRun()">No thanks, start fresh</button>
+  </div>
+  <div class="ex-banner"><span>📘 Includes example data</span><button class="small secondary" onclick="removeExamples()">Remove</button></div>
   <div class="stats-row" id="menuStats"></div>
   <div class="tiles" style="margin-top:12px">
-    <button class="tile primary" onclick="startNewInvoice()"><span class="ic">＋</span><b>New Invoice</b></button>
+    <button class="tile primary" style="grid-column:auto" onclick="startNewInvoice()"><span class="ic">＋</span><b>New Invoice</b></button>
+    <button class="tile primary" style="grid-column:auto; background:var(--olive)" onclick="startNewQuote()"><span class="ic">＋</span><b>New Quote</b></button>
+    <button class="tile" onclick="showScreen('quotes')"><span class="ic">📝</span><b>Quotes</b><span class="muted">Estimates &amp; status</span></button>
+    <button class="tile" onclick="showScreen('jobs')"><span class="ic">🧰</span><b>Jobs</b><span class="muted">Leads, timer, materials</span></button>
     <button class="tile" onclick="showScreen('history')"><span class="ic">🧾</span><b>Invoices</b><span class="muted">History &amp; paid status</span></button>
     <button class="tile" onclick="showScreen('calendar')"><span class="ic">📅</span><b>Log &amp; Calendar</b><span class="muted">Work days &amp; journal</span></button>
     <button class="tile" onclick="showScreen('dashboard')"><span class="ic">📊</span><b>Earnings</b><span class="muted">Totals &amp; chart</span></button>
     <button class="tile" onclick="showScreen('customers')"><span class="ic">👥</span><b>Customers</b><span class="muted">Address book</span></button>
     <button class="tile" onclick="showScreen('catalogEditor')"><span class="ic">🛠️</span><b>Catalogue</b><span class="muted">Edit prices</span></button>
     <button class="tile" onclick="showScreen('profile')"><span class="ic">🏷️</span><b>Edit Profile</b><span class="muted">PIN-protected</span></button>
-    <button class="tile" onclick="showScreen('backup')"><span class="ic">💾</span><b>Backup</b><span class="muted">Export / import</span></button>
+    <button class="tile" onclick="showScreen('backup')"><span class="ic">💾</span><b>Backup &amp; Examples</b><span class="muted">Export / import</span></button>
   </div>
   <button onclick="lockApp()" class="danger" style="margin-top:16px">Lock</button>
 </div>
@@ -197,6 +215,8 @@ canvas { display: none; }
     <input id="pTransport" type="number" step="0.01">
     <label>Default Maintenance Fee</label>
     <input id="pMaint" type="number" step="0.01">
+    <label>Default Hourly Rate (jobs)</label>
+    <input id="pRate" type="number" step="0.01">
   </div>
   <div class="card" id="profileLock" style="border:2px solid var(--orange)">
     <h3>🔒 Confirm changes</h3>
@@ -213,7 +233,7 @@ canvas { display: none; }
 
 <!-- New Invoice: Category Select -->
 <div id="newInvoice" class="screen">
-  <h2>Select Work Type</h2>
+  <h2 id="newInvTitle">Select Work Type</h2>
   <button onclick="selectCategory('Home Repairs')">Home Repairs</button>
   <button onclick="selectCategory('Small Engine')">Small Engine</button>
   <button onclick="selectCategory('Plumbing')">Plumbing</button>
@@ -226,6 +246,13 @@ canvas { display: none; }
 <div id="builder" class="screen">
   <h2 id="catTitle">Builder</h2>
   <p class="muted" id="builderInvNum"></p>
+  <div class="section" id="quoteFields" style="display:none; border:2px solid var(--olive)">
+    <h3>Estimate details</h3>
+    <div class="row2">
+      <div><label>Valid until</label><input id="qExpiry" type="date"></div>
+      <div><label>Status</label><select id="qStatus"><option>Draft</option><option>Sent</option><option>Accepted</option><option>Declined</option></select></div>
+    </div>
+  </div>
   <div class="section">
     <h3>Customer</h3>
     <label>Customer name (optional)</label>
@@ -251,17 +278,26 @@ canvas { display: none; }
   <input id="invMaint" type="number" step="0.01">
   <label>Private notes (file copy only, never on customer copy)</label>
   <textarea id="invNotes" rows="3" placeholder="Parts used, gate code, follow-ups..."></textarea>
-  <button onclick="previewInvoice()">Preview Invoice</button>
+  <button onclick="previewInvoice()" id="previewBtn">Preview Invoice</button>
   <button onclick="showScreen('newInvoice')" class="secondary">Back</button>
 </div>
 
 <!-- Preview -->
 <div id="previewScreen" class="screen">
-  <h2>Invoice Preview</h2>
+  <h2 id="previewTitle">Invoice Preview</h2>
   <div id="invoicePreview" class="section"></div>
-  <button onclick="exportPNG()">Customer Copy PNG</button>
-  <button onclick="exportPNG(true)" class="olive">My File Copy PNG</button>
-  <button onclick="togglePaid(currentInvoice.id); previewInvoice(true)" class="secondary" id="previewPaidBtn">Mark Paid</button>
+  <div id="previewInvoiceBtns">
+    <button onclick="exportPNG()">Customer Copy PNG</button>
+    <button onclick="exportPNG(true)" class="olive">My File Copy PNG</button>
+    <button onclick="togglePaid(currentInvoice.id); previewInvoice(true)" class="secondary" id="previewPaidBtn">Mark Paid</button>
+  </div>
+  <div id="previewQuoteBtns" style="display:none">
+    <button onclick="exportPNG()">Estimate PNG</button>
+    <label>Quote status</label>
+    <select id="pvQuoteStatus" onchange="setQuoteStatus(currentInvoice.id, this.value)"><option>Draft</option><option>Sent</option><option>Accepted</option><option>Declined</option></select>
+    <button onclick="convertQuote(currentInvoice.id)" class="olive">Convert to Invoice</button>
+    <button onclick="jobFromQuote(currentInvoice.id)" class="secondary">Create Job</button>
+  </div>
   <button onclick="showScreen('builder')" class="secondary">Back to Edit</button>
   <button onclick="showScreen('menu')" class="secondary">Done</button>
 </div>
@@ -280,6 +316,7 @@ canvas { display: none; }
       <span><i class="dot work"></i> Day job</span>
       <span><i class="dot side"></i> Side project</span>
       <span><i class="dot note"></i> Journal note</span>
+      <span><i class="dot sched"></i> Job scheduled</span>
     </div>
   </div>
   <div class="stats-row" id="monthSummary"></div>
@@ -301,6 +338,7 @@ canvas { display: none; }
     <label>Notes / journal</label>
     <textarea id="dNotes" rows="6" placeholder="How did it go?"></textarea>
     <div id="dInvoices" class="muted"></div>
+    <div id="dJobs" class="muted" style="margin-top:6px"></div>
   </div>
   <button onclick="saveDay()">Save Day</button>
   <button onclick="clearDay()" class="danger">Clear Day</button>
@@ -310,6 +348,7 @@ canvas { display: none; }
 <!-- Invoice history -->
 <div id="history" class="screen">
   <h2>Invoices</h2>
+  <div class="ex-banner"><span>📘 Includes example data</span><button class="small secondary" onclick="removeExamples()">Remove</button></div>
   <input id="histSearch" type="search" placeholder="Search number, customer, work type, item..." oninput="renderHistory()">
   <select id="histFilter" onchange="renderHistory()">
     <option value="all">All</option>
@@ -323,8 +362,10 @@ canvas { display: none; }
 <!-- Dashboard -->
 <div id="dashboard" class="screen">
   <h2>Earnings</h2>
+  <div class="ex-banner"><span>📘 Includes example data</span><button class="small secondary" onclick="removeExamples()">Remove</button></div>
   <div class="stats-row" id="dashStats"></div>
   <div class="stats-row" id="dashStats2" style="margin-top:10px"></div>
+  <div class="stats-row" id="dashStats3" style="margin-top:10px"></div>
   <div class="card">
     <h3>Last 12 months</h3>
     <div class="chart" id="dashChart"></div>
@@ -383,7 +424,91 @@ canvas { display: none; }
     <button onclick="importBackup()" class="danger">Restore from File</button>
     <p id="backupMsg" class="muted"></p>
   </div>
+  <div class="card">
+    <h3>Example data</h3>
+    <p class="muted">Example records are marked EXAMPLE and use EX- numbers, so they never use up real invoice or quote numbers. Removing them deletes only the examples.</p>
+    <button class="olive" onclick="loadExamples()">Load example data</button>
+    <button class="danger" onclick="removeExamples()">Remove example data</button>
+  </div>
   <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Quotes -->
+<div id="quotes" class="screen">
+  <h2>Quotes</h2>
+  <div class="ex-banner"><span>📘 Includes example data</span><button class="small secondary" onclick="removeExamples()">Remove</button></div>
+  <button class="olive" onclick="startNewQuote()">＋ New Quote</button>
+  <input id="quoteSearch" type="search" placeholder="Search number, customer, work type, item..." oninput="renderQuotes()">
+  <select id="quoteFilter" onchange="renderQuotes()">
+    <option value="all">All statuses</option><option value="open">Open (Draft + Sent)</option>
+    <option>Draft</option><option>Sent</option><option>Accepted</option><option>Declined</option>
+  </select>
+  <div id="quoteList"></div>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Jobs -->
+<div id="jobs" class="screen">
+  <h2>Jobs</h2>
+  <div class="ex-banner"><span>📘 Includes example data</span><button class="small secondary" onclick="removeExamples()">Remove</button></div>
+  <button onclick="openJob(newJob({}).id)">＋ New Job</button>
+  <input id="jobSearch" type="search" placeholder="Search customer, address, notes..." oninput="renderJobs()">
+  <select id="jobFilter" onchange="renderJobs()">
+    <option value="active">Active (not Done/Paid)</option><option value="all">All</option>
+    <option>Lead</option><option>Quoted</option><option>Scheduled</option><option>In progress</option><option>Done</option><option>Paid</option>
+  </select>
+  <div id="jobList"></div>
+  <button onclick="showScreen('menu')" class="secondary">Back</button>
+</div>
+
+<!-- Job detail -->
+<div id="jobDetail" class="screen">
+  <h2 id="jobTitle">Job</h2>
+  <div class="card">
+    <label>Customer</label>
+    <input id="jCustomer" list="custList2" onchange="jobAutofill()">
+    <datalist id="custList2"></datalist>
+    <label>Address</label>
+    <textarea id="jAddress" rows="2"></textarea>
+    <div class="row2">
+      <div><label>Work type</label><select id="jCategory"><option>Home Repairs</option><option>Small Engine</option><option>Plumbing</option><option>Electrical</option><option>General</option></select></div>
+      <div><label>Status</label><select id="jStatus"><option>Lead</option><option>Quoted</option><option>Scheduled</option><option>In progress</option><option>Done</option><option>Paid</option></select></div>
+    </div>
+    <div class="row2">
+      <div><label>Scheduled date</label><input id="jScheduled" type="date"></div>
+      <div><label>Hourly rate</label><input id="jRate" type="number" step="0.01"></div>
+    </div>
+    <label>Notes</label>
+    <textarea id="jNotes" rows="3"></textarea>
+    <button onclick="saveJobForm(); toast('Job saved')">Save Job</button>
+  </div>
+  <div class="card">
+    <h3>⏱ Time</h3>
+    <div class="timer" id="timerDisplay">00:00:00</div>
+    <button id="timerBtn" onclick="toggleTimer()">Start Timer</button>
+    <div class="row2">
+      <input id="jManDate" type="date">
+      <input id="jManHours" type="number" step="0.25" placeholder="Hours">
+    </div>
+    <button class="secondary" onclick="addManualHours()">Add Hours</button>
+    <div id="jTimeList"></div>
+  </div>
+  <div class="card">
+    <h3>🔩 Materials</h3>
+    <div class="row2">
+      <input id="jMatName" placeholder="Material" style="flex:2">
+      <input id="jMatCost" type="number" step="0.01" placeholder="Cost">
+    </div>
+    <button class="secondary" onclick="addMaterial()">Add Material</button>
+    <div id="jMatList"></div>
+  </div>
+  <div class="card">
+    <h3>🔗 Linked</h3>
+    <div id="jLinked" class="muted"></div>
+  </div>
+  <button onclick="jobToInvoice()">Create Invoice from Job</button>
+  <button onclick="deleteJob()" class="danger">Delete Job</button>
+  <button onclick="showScreen('jobs')" class="secondary">Back to Jobs</button>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -400,7 +525,8 @@ let profile = {
   email: 'info@hoppshandyman.com',
   web: 'hoppshandyman.com',
   transport: 25,
-  maint: 40
+  maint: 40,
+  rate: 60
 };
 let currentCategory = '';
 let invoiceItems = [];
@@ -444,7 +570,8 @@ const defaultCatalogue = {
 let catalogue = JSON.parse(JSON.stringify(defaultCatalogue));
 
 /* ---------- Storage helpers (localStorage only) ---------- */
-const KEYS = ['hoppsProfile', 'hoppsCatalogue', 'hoppsInvoices', 'hoppsNextNum', 'hoppsLog', 'hoppsCustomers'];
+const KEYS = ['hoppsProfile', 'hoppsCatalogue', 'hoppsInvoices', 'hoppsNextNum', 'hoppsLog', 'hoppsCustomers',
+  'hoppsQuotes', 'hoppsNextQuote', 'hoppsJobs', 'hoppsNextJob', 'hoppsExamplesDismissed'];
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
 }
@@ -452,6 +579,12 @@ function store(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 const getInvoices = () => load('hoppsInvoices', []);
 const getLog = () => load('hoppsLog', {});
 const getCustomers = () => load('hoppsCustomers', []);
+const getQuotes = () => load('hoppsQuotes', []);
+const getJobs = () => load('hoppsJobs', []);
+const round2 = n => Math.round(n * 100) / 100;
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function longDate(s) { return s ? parseYmd(s).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''; }
+const exBadge = r => r && r.isExample ? ' <span class="badge ex">EXAMPLE</span>' : '';
 
 /* ---------- Formatting helpers ---------- */
 function money(n) {
@@ -501,6 +634,7 @@ function saveProfile() {
   profile.web = document.getElementById('pWeb').value;
   profile.transport = parseFloat(document.getElementById('pTransport').value) || 0;
   profile.maint = parseFloat(document.getElementById('pMaint').value) || 0;
+  profile.rate = parseFloat(document.getElementById('pRate').value) || 0;
   localStorage.setItem('hoppsProfile', JSON.stringify(profile));
   document.getElementById('bizNameHeader').textContent = profile.name;
   toast('Profile saved');
@@ -516,6 +650,7 @@ function fillProfileForm() {
   document.getElementById('pWeb').value = profile.web || '';
   document.getElementById('pTransport').value = profile.transport || 0;
   document.getElementById('pMaint').value = profile.maint || 0;
+  document.getElementById('pRate').value = profile.rate != null ? profile.rate : 60;
   document.getElementById('pLockPin').value = '';
   document.getElementById('pLockConfirm').value = '';
   document.getElementById('profileLockError').style.display = 'none';
@@ -534,6 +669,12 @@ function showScreen(id) {
   if (id === 'dashboard') renderDashboard();
   if (id === 'customers') renderCustomers();
   if (id === 'catalogEditor') renderCatalogEditor();
+  if (id === 'quotes') renderQuotes();
+  if (id === 'jobs') renderJobs();
+  if (id === 'jobDetail') renderJobDetail();
+  if (id !== 'jobDetail') clearInterval(timerTick);
+  if (id === 'newInvoice') document.getElementById('newInvTitle').textContent = builderMode === 'quote' ? 'New Quote: Work Type' : 'Select Work Type';
+  updateExampleUI();
 }
 function checkPin() {
   const val = document.getElementById('pinInput').value;
@@ -571,8 +712,16 @@ function renderMenuStats() {
 }
 
 /* ---------- Invoice builder ---------- */
+let builderMode = 'invoice';   // 'invoice' or 'quote'
+let pendingLink = null;        // {quoteId, jobId} applied to the next new invoice
 function startNewInvoice() {
-  editingId = null; editingDate = null;
+  builderMode = 'invoice';
+  editingId = null; editingDate = null; pendingLink = null;
+  showScreen('newInvoice');
+}
+function startNewQuote() {
+  builderMode = 'quote';
+  editingId = null; editingDate = null; pendingLink = null;
   showScreen('newInvoice');
 }
 function selectCategory(cat) {
@@ -584,11 +733,16 @@ function selectCategory(cat) {
   document.getElementById('invCustomer').value = '';
   document.getElementById('invJobAddress').value = '';
   document.getElementById('invNotes').value = '';
+  document.getElementById('qExpiry').value = ymd(addDays(new Date(), 30));
+  document.getElementById('qStatus').value = 'Draft';
   editingId = null; editingDate = null;
   showScreen('builder');
 }
 function renderCatalogue() {
-  document.getElementById('builderInvNum').textContent = editingId ? 'Editing ' + editingId : 'New invoice (number assigned on preview)';
+  const isQ = builderMode === 'quote';
+  document.getElementById('builderInvNum').textContent = editingId ? 'Editing ' + editingId : (isQ ? 'New quote (Q- number assigned on preview)' : 'New invoice (number assigned on preview)');
+  document.getElementById('quoteFields').style.display = isQ ? 'block' : 'none';
+  document.getElementById('previewBtn').textContent = isQ ? 'Preview Quote' : 'Preview Invoice';
   const dl = document.getElementById('custList');
   dl.innerHTML = getCustomers().map(c => `<option value="${esc(c.name)}">`).join('');
   const list = document.getElementById('catalogueList');
@@ -649,30 +803,65 @@ function autofillCustomer() {
   if (c && !addr.value) addr.value = c.address || '';
 }
 
-function nextInvoiceNumber() {
-  const n = load('hoppsNextNum', 1);
-  store('hoppsNextNum', n + 1);
-  return 'HOP-' + String(n).padStart(4, '0');
+function nextNumber(key, prefix) {
+  const n = load(key, 1);
+  store(key, n + 1);
+  return prefix + String(n).padStart(4, '0');
 }
+function nextInvoiceNumber() { return nextNumber('hoppsNextNum', 'HOP-'); }
 function saveCurrentInvoice() {
   // Upsert into history; preserves paid status
   const invs = getInvoices();
   const idx = invs.findIndex(i => i.id === currentInvoice.id);
-  if (idx >= 0) { currentInvoice.paid = invs[idx].paid; invs[idx] = currentInvoice; }
+  if (idx >= 0) {
+    ['paid', 'isExample', 'quoteId', 'jobId'].forEach(k => { if (invs[idx][k] !== undefined) currentInvoice[k] = invs[idx][k]; });
+    invs[idx] = currentInvoice;
+  }
   else invs.push(currentInvoice);
   store('hoppsInvoices', invs);
   // Remember customer in the address book
-  if (currentInvoice.customer) upsertCustomer(currentInvoice.customer, currentInvoice.jobAddress);
+  if (currentInvoice.customer) upsertCustomer(currentInvoice.customer, currentInvoice.jobAddress, currentInvoice.isExample);
   logInvoice(currentInvoice);
+  linkInvoice(currentInvoice);
+}
+function linkInvoice(inv) {
+  if (inv.quoteId) {
+    const qs = getQuotes(); const q = qs.find(x => x.id === inv.quoteId);
+    if (q) { q.status = 'Accepted'; q.invoiceId = inv.id; store('hoppsQuotes', qs); }
+  }
+  if (inv.jobId) {
+    const js = getJobs(); const j = js.find(x => x.id === inv.jobId);
+    if (j) {
+      if (!j.invoiceIds.includes(inv.id)) j.invoiceIds.push(inv.id);
+      j.status = inv.paid ? 'Paid' : (j.status === 'Paid' ? 'Paid' : 'Done');
+      store('hoppsJobs', js);
+    }
+  }
+}
+function saveQuote(q) {
+  const qs = getQuotes();
+  const idx = qs.findIndex(x => x.id === q.id);
+  if (idx >= 0) {
+    ['isExample', 'jobId', 'invoiceId'].forEach(k => { if (qs[idx][k] !== undefined) q[k] = qs[idx][k]; });
+    qs[idx] = q;
+  } else qs.push(q);
+  store('hoppsQuotes', qs);
+  if (q.customer) upsertCustomer(q.customer, q.jobAddress, q.isExample);
+  if (q.jobId) {
+    const js = getJobs(); const j = js.find(x => x.id === q.jobId);
+    if (j && !j.quoteIds.includes(q.id)) { j.quoteIds.push(q.id); store('hoppsJobs', js); }
+  }
 }
 function previewInvoice(keepPaid) {
+  const isQ = builderMode === 'quote';
   if (keepPaid !== true) {
     const transport = parseFloat(document.getElementById('invTransport').value) || 0;
     const maint = parseFloat(document.getElementById('invMaint').value) || 0;
     let sub = invoiceItems.reduce((s, it) => s + it.price * it.qty, 0);
     const total = Math.round((sub + transport + maint) * 100) / 100;
-    if (!editingId) { editingId = nextInvoiceNumber(); editingDate = ymd(new Date()); }
+    if (!editingId) { editingId = isQ ? nextNumber('hoppsNextQuote', 'Q-') : nextInvoiceNumber(); editingDate = ymd(new Date()); }
     currentInvoice = {
+      kind: isQ ? 'quote' : 'invoice',
       id: editingId,
       date: editingDate,
       category: currentCategory,
@@ -682,9 +871,17 @@ function previewInvoice(keepPaid) {
       items: invoiceItems.map(it => ({ ...it })),
       transport, maint, total, paid: false
     };
-    saveCurrentInvoice();
+    if (isQ) {
+      delete currentInvoice.paid;
+      currentInvoice.expiry = document.getElementById('qExpiry').value || ymd(addDays(parseYmd(editingDate), 30));
+      currentInvoice.status = document.getElementById('qStatus').value || 'Draft';
+      saveQuote(currentInvoice);
+    } else {
+      if (pendingLink) { Object.assign(currentInvoice, pendingLink); pendingLink = null; }
+      saveCurrentInvoice();
+    }
   } else {
-    currentInvoice = getInvoices().find(i => i.id === currentInvoice.id) || currentInvoice;
+    currentInvoice = (isQ ? getQuotes() : getInvoices()).find(i => i.id === currentInvoice.id) || currentInvoice;
   }
 
   const inv = currentInvoice;
@@ -694,23 +891,29 @@ function previewInvoice(keepPaid) {
     <div style="font-size:13px; margin-top:4px; white-space:pre-line;">${esc(profile.address || '')}</div>
     <div style="font-size:13px;">${esc(profile.phone || '')} · ${esc(profile.email || '')}<br>${esc(profile.web || '')}</div>
     <hr style="border:1px solid #FF6600; margin:12px 0;">
-    <div style="display:flex; justify-content:space-between; font-size:14px;"><b>Invoice ${esc(inv.id)}</b><span>${parseYmd(inv.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>
-    ${inv.customer ? `<div style="font-size:14px; margin-top:6px;"><b>Bill to:</b> ${esc(inv.customer)}</div>` : ''}
+    ${isQ ? '<div style="font-size:22px; font-weight:800; letter-spacing:2px;">ESTIMATE</div>' : ''}
+    <div style="display:flex; justify-content:space-between; font-size:14px;"><b>${isQ ? 'Estimate' : 'Invoice'} ${esc(inv.id)}${exBadge(inv)}</b><span>${parseYmd(inv.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>
+    ${isQ ? `<div style="font-size:14px; margin-top:4px;"><b>Valid until:</b> ${longDate(inv.expiry)}</div>` : ''}
+    ${inv.customer ? `<div style="font-size:14px; margin-top:6px;"><b>${isQ ? 'Prepared for' : 'Bill to'}:</b> ${esc(inv.customer)}</div>` : ''}
     <div class="green" style="color:#6B8E23; font-size:14px; margin-top:10px;">Thanks for thinking of us</div>
-    <h3 style="margin:16px 0 8px;">Work accomplished</h3>`;
+    <h3 style="margin:16px 0 8px;">${isQ ? 'Proposed work' : 'Work accomplished'}</h3>`;
   inv.items.forEach(it => {
     html += `<div style="display:flex; justify-content:space-between; gap:10px; margin:4px 0;"><span>${esc(it.name)}${it.qty > 1 ? ` <small>(×${it.qty} @ ${money(it.price)})</small>` : ''}</span><span>${money(it.price * it.qty)}</span></div>`;
   });
   if (inv.maint) html += `<div style="display:flex; justify-content:space-between; margin:4px 0; border-top:1px solid #ddd; padding-top:6px;"><span>General maintenance fee</span><span>${money(inv.maint)}</span></div>`;
   if (inv.transport) html += `<div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Transportation</span><span>${money(inv.transport)}</span></div>`;
-  html += `<div style="background:#FF6600; color:white; padding:10px; margin-top:12px; font-size:20px; font-weight:bold; text-align:right; border-radius:4px;">Total ${money(inv.total)}</div>
-    ${inv.paid ? '<div style="color:#6B8E23; font-weight:800; text-align:right; margin-top:6px;">PAID — thank you!</div>' : ''}
+  html += `<div style="background:#FF6600; color:white; padding:10px; margin-top:12px; font-size:20px; font-weight:bold; text-align:right; border-radius:4px;">${isQ ? 'Estimated total' : 'Total'} ${money(inv.total)}</div>
+    ${inv.paid && !isQ ? '<div style="color:#6B8E23; font-weight:800; text-align:right; margin-top:6px;">PAID — thank you!</div>' : ''}
   </div>`;
   if (inv.notes || inv.jobAddress) {
     html += `<div class="muted" style="margin-top:8px;">🔒 Private (file copy only):${inv.jobAddress ? '<br>Job: ' + esc(inv.jobAddress) : ''}${inv.notes ? '<br>Notes: ' + esc(inv.notes) : ''}</div>`;
   }
   document.getElementById('invoicePreview').innerHTML = html;
   document.getElementById('previewPaidBtn').textContent = inv.paid ? 'Mark Unpaid' : 'Mark Paid';
+  document.getElementById('previewTitle').textContent = isQ ? 'Quote Preview' : 'Invoice Preview';
+  document.getElementById('previewInvoiceBtns').style.display = isQ ? 'none' : 'block';
+  document.getElementById('previewQuoteBtns').style.display = isQ ? 'block' : 'none';
+  if (isQ) document.getElementById('pvQuoteStatus').value = inv.status || 'Draft';
   showScreen('previewScreen');
 }
 
@@ -739,6 +942,7 @@ function wrapText(ctx, text, maxW) {
 function layoutInvoice(ctx, inv, fileCopy, draw) {
   const w = 800, L = 40, R = w - 40;
   const FONT = 'system-ui, -apple-system, sans-serif';
+  const isQ = inv.kind === 'quote';
   const text = (s, x, y, align) => { if (draw) { ctx.textAlign = align || 'left'; ctx.fillText(s, x, y); } };
   if (draw) { ctx.fillStyle = '#FFF8F0'; ctx.fillRect(0, 0, w, ctx.canvas.height); }
   let y = 0;
@@ -773,15 +977,25 @@ function layoutInvoice(ctx, inv, fileCopy, draw) {
   y += 34;
 
   // Invoice number + date
+  if (isQ) {
+    ctx.fillStyle = '#333'; ctx.font = `bold 32px ${FONT}`;
+    text('ESTIMATE', L, y); y += 38;
+  }
   ctx.fillStyle = '#333'; ctx.font = `bold 20px ${FONT}`;
-  text('Invoice ' + inv.id, L, y);
+  text((isQ ? 'Estimate ' : 'Invoice ') + inv.id, L, y);
   ctx.font = `18px ${FONT}`;
   text(parseYmd(inv.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), R, y, 'right');
+  if (isQ) {
+    y += 30;
+    ctx.font = `bold 18px ${FONT}`; text('Valid until:', L, y);
+    ctx.font = `18px ${FONT}`; text(longDate(inv.expiry), L + 110, y);
+  }
   if (inv.customer) {
     y += 30;
-    ctx.font = `bold 18px ${FONT}`; text('Bill to:', L, y);
+    const lbl = isQ ? 'Prepared for:' : 'Bill to:', off = isQ ? 128 : 72;
+    ctx.font = `bold 18px ${FONT}`; text(lbl, L, y);
     ctx.font = `18px ${FONT}`;
-    wrapText(ctx, inv.customer, R - L - 80).forEach((line, i) => { if (i) y += 24; text(line, L + 72, y); });
+    wrapText(ctx, inv.customer, R - L - off - 8).forEach((line, i) => { if (i) y += 24; text(line, L + off, y); });
   }
   y += 40;
 
@@ -792,7 +1006,7 @@ function layoutInvoice(ctx, inv, fileCopy, draw) {
 
   // Work
   ctx.fillStyle = '#333'; ctx.font = `bold 22px ${FONT}`;
-  text('Work accomplished', L, y);
+  text(isQ ? 'Proposed work' : 'Work accomplished', L, y);
   y += 36;
   const priceColW = 150, descW = R - L - priceColW - 20;
   const row = (desc, amount) => {
@@ -815,9 +1029,14 @@ function layoutInvoice(ctx, inv, fileCopy, draw) {
   y += 10;
   if (draw) { ctx.fillStyle = '#FF6600'; ctx.fillRect(L, y, R - L, 56); }
   ctx.fillStyle = 'white'; ctx.font = `bold 28px ${FONT}`;
-  text('Total  ' + money(inv.total), R - 20, y + 38, 'right');
+  text((isQ ? 'Estimated total  ' : 'Total  ') + money(inv.total), R - 20, y + 38, 'right');
   y += 56;
-  if (inv.paid) {
+  if (isQ) {
+    y += 34; ctx.fillStyle = '#555'; ctx.font = `italic 16px ${FONT}`;
+    wrapText(ctx, `This estimate is valid until ${longDate(inv.expiry)}. Final price may change if the scope of work changes.`, R - L)
+      .forEach((line, i) => { if (i) y += 22; text(line, L, y); });
+  }
+  if (inv.paid && !isQ) {
     y += 34; ctx.fillStyle = '#6B8E23'; ctx.font = `bold 22px ${FONT}`;
     text('PAID — thank you!', R, y, 'right');
   }
@@ -840,6 +1059,12 @@ function layoutInvoice(ctx, inv, fileCopy, draw) {
     field('Status', inv.paid ? 'Paid' : 'Unpaid');
     field('Private notes', inv.notes);
   }
+  if (inv.isExample && draw) {
+    // Watermark so example PNGs are never mistaken for real ones
+    ctx.save(); ctx.translate(w / 2, ctx.canvas.height / 2); ctx.rotate(-0.5);
+    ctx.fillStyle = 'rgba(255,102,0,0.10)'; ctx.font = `bold 150px ${FONT}`; ctx.textAlign = 'center';
+    ctx.fillText('EXAMPLE', 0, 0); ctx.restore();
+  }
   return y + 50;
 }
 function drawInvoice(inv, fileCopy) {
@@ -854,10 +1079,11 @@ function drawInvoice(inv, fileCopy) {
 function exportPNG(fileCopy, inv) {
   inv = inv || currentInvoice;
   if (!inv || !inv.id) return;
-  if (inv === currentInvoice) saveCurrentInvoice(); // auto-log (idempotent per invoice number)
-  const canvas = drawInvoice(inv, !!fileCopy);
+  const isQ = inv.kind === 'quote';
+  if (inv === currentInvoice && !isQ) saveCurrentInvoice(); // auto-log (idempotent per invoice number)
+  const canvas = drawInvoice(inv, !!fileCopy && !isQ);
   const link = document.createElement('a');
-  link.download = 'Hopps-Invoice-' + inv.id + (fileCopy ? '-FILE-COPY' : '-Customer') + '.png';
+  link.download = isQ ? 'Hopps-Estimate-' + inv.id + '.png' : 'Hopps-Invoice-' + inv.id + (fileCopy ? '-FILE-COPY' : '-Customer') + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
 }
@@ -866,7 +1092,7 @@ function exportPNG(fileCopy, inv) {
 function renderHistory() {
   const q = document.getElementById('histSearch').value.trim().toLowerCase();
   const f = document.getElementById('histFilter').value;
-  const invs = getInvoices().slice().sort((a, b) => b.id.localeCompare(a.id));
+  const invs = getInvoices().slice().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
   const list = invs.filter(i => {
     if (f === 'paid' && !i.paid) return false;
     if (f === 'unpaid' && i.paid) return false;
@@ -876,9 +1102,10 @@ function renderHistory() {
   });
   document.getElementById('histList').innerHTML = list.length ? list.map(i => `
     <div class="card inv-card">
-      <div class="top"><b>${esc(i.id)}</b><span class="amt">${money(i.total)}</span></div>
+      <div class="top"><b>${esc(i.id)}${exBadge(i)}</b><span class="amt">${money(i.total)}</span></div>
       <div>${esc(i.customer || 'No customer')} · ${esc(i.category)}</div>
       <div class="muted">${niceDate(i.date)} · ${i.items.length} item(s) <span class="badge ${i.paid ? 'paid' : 'unpaid'}">${i.paid ? 'PAID' : 'UNPAID'}</span></div>
+      ${i.quoteId || i.jobId ? `<div class="muted">From ${[i.quoteId, i.jobId].filter(Boolean).map(esc).join(' · ')}</div>` : ''}
       <div class="btn-row">
         <button class="small" onclick="reopenInvoice('${i.id}')">Open</button>
         <button class="small secondary" onclick="duplicateInvoice('${i.id}')">Duplicate</button>
@@ -895,9 +1122,14 @@ function loadIntoBuilder(inv) {
   document.getElementById('invCustomer').value = inv.customer || '';
   document.getElementById('invJobAddress').value = inv.jobAddress || '';
   document.getElementById('invNotes').value = inv.notes || '';
+  if (inv.kind === 'quote') {
+    document.getElementById('qExpiry').value = inv.expiry || '';
+    document.getElementById('qStatus').value = inv.status || 'Draft';
+  }
 }
 function reopenInvoice(id) {
   const inv = getInvoices().find(i => i.id === id); if (!inv) return;
+  builderMode = 'invoice'; pendingLink = null;
   loadIntoBuilder(inv);
   editingId = inv.id; editingDate = inv.date;
   currentInvoice = inv;
@@ -905,6 +1137,7 @@ function reopenInvoice(id) {
 }
 function duplicateInvoice(id) {
   const inv = getInvoices().find(i => i.id === id); if (!inv) return;
+  builderMode = 'invoice'; pendingLink = null;
   loadIntoBuilder(inv);
   editingId = null; editingDate = null;
   toast('Copied — new number on preview');
@@ -915,16 +1148,17 @@ function togglePaid(id) {
   const inv = invs.find(i => i.id === id); if (!inv) return;
   inv.paid = !inv.paid;
   store('hoppsInvoices', invs);
+  if (inv.jobId) linkInvoice(inv);
   if (currentInvoice && currentInvoice.id === id) currentInvoice.paid = inv.paid;
   toast(inv.id + (inv.paid ? ' marked paid' : ' marked unpaid'));
 }
 
 /* ---------- Customers ---------- */
-function upsertCustomer(name, address) {
+function upsertCustomer(name, address, isExample) {
   const list = getCustomers();
   const c = list.find(c => c.name.toLowerCase() === name.toLowerCase());
-  if (c) { if (address) c.address = address; }
-  else list.push({ name, address: address || '' });
+  if (c) { if (address) c.address = address; if (!isExample) delete c.isExample; } // used by real data -> keep it
+  else list.push(Object.assign({ name, address: address || '' }, isExample ? { isExample: true } : {}));
   list.sort((a, b) => a.name.localeCompare(b.name));
   store('hoppsCustomers', list);
 }
@@ -962,7 +1196,7 @@ function renderCustomers() {
     const mine = invs.filter(x => (x.customer || '').toLowerCase() === c.name.toLowerCase());
     const billed = mine.reduce((s, x) => s + x.total, 0);
     const owed = mine.filter(x => !x.paid).reduce((s, x) => s + x.total, 0);
-    return `<div class="card"><b>${esc(c.name)}</b><div class="muted" style="white-space:pre-line">${esc(c.address || 'No address')}</div>
+    return `<div class="card"><b>${esc(c.name)}</b>${exBadge(c)}<div class="muted" style="white-space:pre-line">${esc(c.address || 'No address')}</div>
       <div class="muted">${mine.length} invoice(s) · ${money(billed)} billed${owed ? ` · <span style="color:#c0392b">${money(owed)} unpaid</span>` : ''}</div>
       <div class="btn-row"><button class="small" onclick="newInvoiceFor(${i})">New invoice</button><button class="small danger" onclick="deleteCustomer(${i})">Delete</button></div></div>`;
   }).join('') : '<p class="muted">No customers yet. They are saved automatically when you preview an invoice with a customer name.</p>';
@@ -1012,6 +1246,7 @@ function calMove(d) {
 function hasEntry(e) { return e && (e.work || e.side || (e.job || '').trim() || (e.notes || '').trim() || Object.keys(e.invoices || {}).length); }
 function renderCalendar() {
   const log = getLog();
+  const { sched, worked: jobWorked } = jobDays();
   const first = new Date(calYear, calMonth, 1);
   const days = new Date(calYear, calMonth + 1, 0).getDate();
   const today = ymd(new Date());
@@ -1021,7 +1256,8 @@ function renderCalendar() {
   for (let d = 1; d <= days; d++) {
     const key = ymd(new Date(calYear, calMonth, d));
     const e = log[key] || {};
-    const dots = (e.work ? '<i class="dot work"></i>' : '') + (e.side ? '<i class="dot side"></i>' : '') + ((e.notes || '').trim() ? '<i class="dot note"></i>' : '');
+    const dots = (e.work ? '<i class="dot work"></i>' : '') + (e.side || jobWorked[key] ? '<i class="dot side"></i>' : '') +
+      ((e.notes || '').trim() ? '<i class="dot note"></i>' : '') + (sched[key] ? '<i class="dot sched"></i>' : '');
     html += `<div class="cal-day${key === today ? ' today' : ''}" data-day="${key}" onclick="openDay('${key}')">${d}<div class="dots">${dots}</div></div>`;
   }
   document.getElementById('calGrid').innerHTML = html;
@@ -1030,7 +1266,8 @@ function renderCalendar() {
   const prefix = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
   const monthKeys = Object.keys(log).filter(k => k.startsWith(prefix));
   const worked = monthKeys.filter(k => log[k].work).length;
-  const side = monthKeys.filter(k => log[k].side).length;
+  const sideDays = new Set([...monthKeys.filter(k => log[k].side), ...Object.keys(jobWorked).filter(k => k.startsWith(prefix))]);
+  const side = sideDays.size;
   const invTotal = getInvoices().filter(i => i.date.startsWith(prefix)).reduce((s, i) => s + i.total, 0);
   document.getElementById('monthSummary').innerHTML =
     `<div class="stat"><div class="v">${worked}</div><div class="l">Days worked</div></div>
@@ -1041,7 +1278,7 @@ function renderCalendar() {
   const keys = Object.keys(log).filter(k => hasEntry(log[k])).sort().reverse().slice(0, 100);
   document.getElementById('logList').innerHTML = keys.length ? keys.map(k => {
     const e = log[k];
-    const tags = (e.work ? '<span class="badge" style="background:var(--orange)">Work</span> ' : '') + (e.side ? '<span class="badge" style="background:var(--olive)">Side</span>' : '');
+    const tags = exBadge(e) + ' ' + (e.work ? '<span class="badge" style="background:var(--orange)">Work</span> ' : '') + (e.side ? '<span class="badge" style="background:var(--olive)">Side</span>' : '');
     const invs = Object.entries(e.invoices || {}).map(([id, t]) => `<div class="muted">🧾 ${esc(id)} — ${esc(t)}</div>`).join('');
     return `<div class="log-entry" onclick="openDay('${k}')"><b>${niceDate(k)}</b> ${tags}
       ${e.job ? `<div>${esc(e.job)}</div>` : ''}${invs}
@@ -1057,6 +1294,9 @@ function openDay(key) {
   document.getElementById('dJob').value = e.job || '';
   document.getElementById('dNotes').value = e.notes || '';
   const invs = Object.entries(e.invoices || {});
+  const { sched, worked } = jobDays();
+  const jl = [...(sched[key] || []).map(id => id + ' scheduled'), ...(worked[key] || []).map(([id, h]) => `${id}: ${h} h worked`)];
+  document.getElementById('dJobs').innerHTML = jl.length ? '<b>Jobs:</b><br>' + jl.map(esc).join('<br>') : '';
   document.getElementById('dInvoices').innerHTML = invs.length ? '<b>Invoices this day:</b><br>' + invs.map(([id, t]) => `${esc(id)} — ${esc(t)}`).join('<br>') : '';
   showScreen('dayEditor');
 }
@@ -1067,6 +1307,7 @@ function saveDay() {
   e.side = document.getElementById('dSide').checked;
   e.job = document.getElementById('dJob').value.trim();
   e.notes = document.getElementById('dNotes').value;
+  delete e.isExample; // edited by hand -> real
   log[editingDay] = e;
   store('hoppsLog', log);
   const d = parseYmd(editingDay); calYear = d.getFullYear(); calMonth = d.getMonth();
@@ -1083,7 +1324,7 @@ function logInvoice(inv) {
   const log = getLog();
   // If the invoice was previously logged under another day, move it
   Object.keys(log).forEach(k => { if (k !== inv.date && log[k].invoices && log[k].invoices[inv.id]) delete log[k].invoices[inv.id]; });
-  const e = log[inv.date] || {};
+  const e = log[inv.date] || (inv.isExample ? { isExample: true } : {});
   e.side = true;
   e.invoices = e.invoices || {};
   const label = `${inv.category} ${money(inv.total)}${inv.customer ? ' (' + inv.customer + ')' : ''}`;
@@ -1110,6 +1351,11 @@ function renderDashboard() {
   document.getElementById('dashStats2').innerHTML =
     `<div class="stat"><div class="v" style="color:#c0392b">${money(sum(unpaidList))}</div><div class="l">Unpaid (${unpaidList.length})</div></div>
      <div class="stat"><div class="v" style="color:var(--olive)">${money(paidYear)}</div><div class="l">Collected ${yr}</div></div>`;
+  const openQ = getQuotes().filter(q => q.status === 'Draft' || q.status === 'Sent');
+  const activeJobs = getJobs().filter(j => j.status !== 'Done' && j.status !== 'Paid');
+  document.getElementById('dashStats3').innerHTML =
+    `<div class="stat"><div class="v" style="color:#555">${money(sum(openQ))}</div><div class="l">Open quotes (${openQ.length})</div></div>
+     <div class="stat"><div class="v" style="color:#555">${activeJobs.length}</div><div class="l">Active jobs</div></div>`;
   // Last 12 months bar chart
   const months = [];
   for (let k = 11; k >= 0; k--) {
@@ -1132,7 +1378,7 @@ function renderDashboard() {
 
 /* ---------- Backup ---------- */
 function exportBackup() {
-  const data = { app: 'hopps-invoices', version: 2, exported: new Date().toISOString(), data: {} };
+  const data = { app: 'hopps-invoices', version: 3, exported: new Date().toISOString(), data: {} };
   KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data.data[k] = JSON.parse(v); });
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
@@ -1153,12 +1399,316 @@ function importBackup() {
       if (!confirm('Replace all data on this device with the backup from ' + (parsed.exported || 'unknown date') + '?')) return;
       KEYS.forEach(k => localStorage.removeItem(k));
       Object.entries(parsed.data).forEach(([k, v]) => { if (KEYS.includes(k)) store(k, v); });
-      loadProfile();
+      loadProfile(); updateExampleUI();
       msg.textContent = 'Restored ' + getInvoices().length + ' invoice(s).';
       toast('Backup restored');
     } catch (e) { msg.textContent = 'Could not restore: ' + e.message; }
   };
   reader.readAsText(file);
+}
+
+/* ---------- Quotes ---------- */
+const QUOTE_COLORS = { Draft: '#888', Sent: '#3A5A80', Accepted: '#6B8E23', Declined: '#c0392b' };
+function renderQuotes() {
+  const q = document.getElementById('quoteSearch').value.trim().toLowerCase();
+  const f = document.getElementById('quoteFilter').value;
+  const today = ymd(new Date());
+  const list = getQuotes().slice().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).filter(x => {
+    if (f === 'open' && !(x.status === 'Draft' || x.status === 'Sent')) return false;
+    if (f !== 'all' && f !== 'open' && x.status !== f) return false;
+    if (!q) return true;
+    return [x.id, x.customer, x.category, x.jobAddress, x.status, ...x.items.map(i => i.name)].join(' ').toLowerCase().includes(q);
+  });
+  document.getElementById('quoteList').innerHTML = list.length ? list.map(x => {
+    const expired = x.expiry < today && (x.status === 'Draft' || x.status === 'Sent');
+    return `<div class="card inv-card">
+      <div class="top"><b>${esc(x.id)}${exBadge(x)}</b><span class="amt">${money(x.total)}</span></div>
+      <div>${esc(x.customer || 'No customer')} · ${esc(x.category)}</div>
+      <div class="muted">${niceDate(x.date)} · Valid until <span style="${expired ? 'color:#c0392b;font-weight:700' : ''}">${longDate(x.expiry)}${expired ? ' (expired)' : ''}</span>
+        <span class="badge" style="background:${QUOTE_COLORS[x.status] || '#888'}">${esc(x.status).toUpperCase()}</span></div>
+      ${x.invoiceId || x.jobId ? `<div class="muted">Linked: ${[x.jobId, x.invoiceId].filter(Boolean).map(esc).join(' · ')}</div>` : ''}
+      <div class="btn-row">
+        <button class="small" onclick="openQuote('${x.id}')">Open</button>
+        <button class="small olive" onclick="convertQuote('${x.id}')">To invoice</button>
+        <button class="small secondary" onclick="jobFromQuote('${x.id}')">${x.jobId ? 'Open job' : 'Create job'}</button>
+      </div>
+    </div>`;
+  }).join('') : '<p class="muted">No quotes found.</p>';
+}
+function openQuote(id) {
+  const x = getQuotes().find(q => q.id === id); if (!x) return;
+  builderMode = 'quote'; pendingLink = null;
+  loadIntoBuilder(x);
+  editingId = x.id; editingDate = x.date;
+  currentInvoice = x;
+  previewInvoice(true);
+}
+function setQuoteStatus(id, status) {
+  const qs = getQuotes(); const x = qs.find(q => q.id === id); if (!x) return;
+  x.status = status; store('hoppsQuotes', qs);
+  if (currentInvoice && currentInvoice.id === id) currentInvoice.status = status;
+  document.getElementById('qStatus').value = status;
+  toast(id + ' → ' + status);
+}
+function convertQuote(id) {
+  const x = getQuotes().find(q => q.id === id); if (!x) return;
+  if (x.invoiceId && !confirm(id + ' was already converted to ' + x.invoiceId + '. Create another invoice?')) return;
+  builderMode = 'invoice';
+  loadIntoBuilder(x);
+  editingId = null; editingDate = null;
+  pendingLink = { quoteId: x.id };
+  if (x.jobId) pendingLink.jobId = x.jobId;
+  toast('Quote copied into a new invoice');
+  showScreen('builder');
+}
+function jobFromQuote(id) {
+  const qs = getQuotes(); const x = qs.find(q => q.id === id); if (!x) return;
+  if (x.jobId && getJobs().some(j => j.id === x.jobId)) { openJob(x.jobId); return; }
+  const job = newJob({ customer: x.customer, address: x.jobAddress, category: x.category, status: x.status === 'Accepted' ? 'Scheduled' : 'Quoted', notes: x.notes || '', quoteIds: [x.id] });
+  x.jobId = job.id; store('hoppsQuotes', qs);
+  toast('Job ' + job.id + ' created');
+  openJob(job.id);
+}
+
+/* ---------- Jobs ---------- */
+const JOB_COLORS = { Lead: '#888', Quoted: '#3A5A80', Scheduled: '#8e44ad', 'In progress': '#FF6600', Done: '#555', Paid: '#6B8E23' };
+let currentJobId = null, timerTick = null;
+function newJob(fields) {
+  const jobs = getJobs();
+  const job = Object.assign({
+    id: fields.id || nextNumber('hoppsNextJob', 'J-'),
+    created: ymd(new Date()), customer: '', address: '', category: 'General', status: 'Lead', scheduled: '',
+    rate: profile.rate != null ? profile.rate : 60, timeEntries: [], materials: [], notes: '', quoteIds: [], invoiceIds: []
+  }, fields);
+  jobs.push(job); store('hoppsJobs', jobs);
+  if (job.customer) upsertCustomer(job.customer, job.address, job.isExample);
+  return job;
+}
+const jobHours = j => round2(j.timeEntries.filter(t => t.end || t.manual).reduce((s, t) => s + (t.hours || 0), 0));
+const jobMaterials = j => round2(j.materials.reduce((s, m) => s + (m.cost || 0), 0));
+function jobDays() {
+  // Days with scheduled jobs and days with logged job time (for the calendar)
+  const sched = {}, worked = {};
+  getJobs().forEach(j => {
+    if (j.scheduled) (sched[j.scheduled] = sched[j.scheduled] || []).push(j.id);
+    const per = {};
+    j.timeEntries.forEach(t => { if (t.hours > 0 || !t.end) per[t.date] = round2((per[t.date] || 0) + (t.hours || 0)); });
+    Object.entries(per).forEach(([d, h]) => (worked[d] = worked[d] || []).push([j.id, h]));
+  });
+  return { sched, worked };
+}
+function renderJobs() {
+  const q = document.getElementById('jobSearch').value.trim().toLowerCase();
+  const f = document.getElementById('jobFilter').value;
+  const list = getJobs().slice().sort((a, b) => (b.scheduled || b.created).localeCompare(a.scheduled || a.created) || b.id.localeCompare(a.id)).filter(j => {
+    if (f === 'active' && (j.status === 'Done' || j.status === 'Paid')) return false;
+    if (f !== 'all' && f !== 'active' && j.status !== f) return false;
+    if (!q) return true;
+    return [j.id, j.customer, j.address, j.category, j.notes, j.status].join(' ').toLowerCase().includes(q);
+  });
+  document.getElementById('jobList').innerHTML = list.length ? list.map(j => {
+    const running = j.timeEntries.some(t => !t.end && !t.manual);
+    return `<div class="card inv-card" onclick="openJob('${j.id}')" style="cursor:pointer">
+      <div class="top"><b>${esc(j.id)}${exBadge(j)}</b><span class="badge" style="background:${JOB_COLORS[j.status] || '#888'}">${esc(j.status).toUpperCase()}</span></div>
+      <div>${esc(j.customer || 'No customer')} · ${esc(j.category)}</div>
+      <div class="muted">${j.scheduled ? '📅 ' + niceDate(j.scheduled) + ' · ' : ''}${jobHours(j)} h · materials ${money(jobMaterials(j))}${running ? ' · <b style="color:#FF6600">⏱ timer running</b>' : ''}</div>
+    </div>`;
+  }).join('') : '<p class="muted">No jobs here yet.</p>';
+}
+function openJob(id) { currentJobId = id; showScreen('jobDetail'); }
+function getCurrentJob() { return getJobs().find(j => j.id === currentJobId); }
+function updateJob(fn) {
+  const jobs = getJobs(); const j = jobs.find(x => x.id === currentJobId); if (!j) return;
+  fn(j); store('hoppsJobs', jobs);
+}
+function renderJobDetail() {
+  const j = getCurrentJob(); if (!j) { showScreen('jobs'); return; }
+  document.getElementById('jobTitle').innerHTML = esc(j.id) + exBadge(j);
+  document.getElementById('custList2').innerHTML = getCustomers().map(c => `<option value="${esc(c.name)}">`).join('');
+  document.getElementById('jCustomer').value = j.customer || '';
+  document.getElementById('jAddress').value = j.address || '';
+  document.getElementById('jCategory').value = j.category || 'General';
+  document.getElementById('jStatus').value = j.status || 'Lead';
+  document.getElementById('jScheduled').value = j.scheduled || '';
+  document.getElementById('jRate').value = j.rate;
+  document.getElementById('jNotes').value = j.notes || '';
+  document.getElementById('jManDate').value = ymd(new Date());
+  document.getElementById('jTimeList').innerHTML = j.timeEntries.map((t, i) => `<div class="item-row"><span class="nm">${niceDate(t.date)}<br><small>${t.manual ? 'Manual entry' : (t.end ? new Date(t.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + ' – ' + new Date(t.end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'Running…')}</small></span><b>${t.end || t.manual ? t.hours + ' h' : ''}</b><button class="danger" onclick="deleteTime(${i})">X</button></div>`).join('')
+    + `<p><b>Total: ${jobHours(j)} h × ${money(j.rate)} = ${money(jobHours(j) * j.rate)}</b></p>`;
+  document.getElementById('jMatList').innerHTML = j.materials.map((m, i) => `<div class="item-row"><span class="nm">${esc(m.name)}</span><b>${money(m.cost)}</b><button class="danger" onclick="deleteMaterial(${i})">X</button></div>`).join('')
+    + `<p><b>Materials: ${money(jobMaterials(j))}</b></p>`;
+  const links = [...j.quoteIds.map(id => `<a href="#" onclick="openQuote('${id}');return false">${esc(id)} (quote)</a>`), ...j.invoiceIds.map(id => `<a href="#" onclick="reopenInvoice('${id}');return false">${esc(id)} (invoice)</a>`)];
+  document.getElementById('jLinked').innerHTML = links.length ? links.join('<br>') : 'No quotes or invoices yet.';
+  updateTimerUI();
+  clearInterval(timerTick); timerTick = setInterval(updateTimerUI, 1000);
+}
+function updateTimerUI() {
+  const j = getCurrentJob(); if (!j) return;
+  const run = j.timeEntries.find(t => !t.end && !t.manual);
+  const secs = run ? Math.floor((Date.now() - new Date(run.start)) / 1000) : 0;
+  document.getElementById('timerDisplay').textContent = [secs / 3600, (secs % 3600) / 60, secs % 60].map(n => String(Math.floor(n)).padStart(2, '0')).join(':');
+  const btn = document.getElementById('timerBtn');
+  btn.textContent = run ? 'Stop Timer' : 'Start Timer';
+  btn.className = run ? 'danger' : '';
+}
+function saveJobForm() {
+  updateJob(j => {
+    j.customer = document.getElementById('jCustomer').value.trim();
+    j.address = document.getElementById('jAddress').value.trim();
+    j.category = document.getElementById('jCategory').value;
+    j.status = document.getElementById('jStatus').value;
+    j.scheduled = document.getElementById('jScheduled').value;
+    j.rate = parseFloat(document.getElementById('jRate').value) || 0;
+    j.notes = document.getElementById('jNotes').value;
+    if (j.customer) upsertCustomer(j.customer, j.address, j.isExample);
+  });
+}
+function jobAutofill() {
+  const c = getCustomers().find(c => c.name.toLowerCase() === document.getElementById('jCustomer').value.trim().toLowerCase());
+  if (c && !document.getElementById('jAddress').value) document.getElementById('jAddress').value = c.address || '';
+}
+function toggleTimer() {
+  saveJobForm();
+  updateJob(j => {
+    const run = j.timeEntries.find(t => !t.end && !t.manual);
+    if (run) {
+      run.end = new Date().toISOString();
+      run.hours = round2((new Date(run.end) - new Date(run.start)) / 3600000);
+    } else {
+      j.timeEntries.push({ date: ymd(new Date()), start: new Date().toISOString(), end: null, hours: 0 });
+      if (['Lead', 'Quoted', 'Scheduled'].includes(j.status)) j.status = 'In progress';
+    }
+  });
+  renderJobDetail();
+}
+function addManualHours() {
+  const h = parseFloat(document.getElementById('jManHours').value);
+  const d = document.getElementById('jManDate').value || ymd(new Date());
+  if (!(h > 0)) return;
+  saveJobForm();
+  updateJob(j => j.timeEntries.push({ date: d, hours: round2(h), manual: true }));
+  document.getElementById('jManHours').value = '';
+  renderJobDetail();
+}
+function deleteTime(i) { saveJobForm(); updateJob(j => j.timeEntries.splice(i, 1)); renderJobDetail(); }
+function addMaterial() {
+  const name = document.getElementById('jMatName').value.trim();
+  const cost = parseFloat(document.getElementById('jMatCost').value);
+  if (!name || isNaN(cost)) return;
+  saveJobForm();
+  updateJob(j => j.materials.push({ name, cost: round2(cost) }));
+  document.getElementById('jMatName').value = ''; document.getElementById('jMatCost').value = '';
+  renderJobDetail();
+}
+function deleteMaterial(i) { saveJobForm(); updateJob(j => j.materials.splice(i, 1)); renderJobDetail(); }
+function deleteJob() {
+  if (!confirm('Delete this job? Linked quotes and invoices are kept.')) return;
+  store('hoppsJobs', getJobs().filter(j => j.id !== currentJobId));
+  showScreen('jobs');
+}
+function jobToInvoice() {
+  saveJobForm();
+  const j = getCurrentJob(); if (!j) return;
+  const h = jobHours(j);
+  builderMode = 'invoice';
+  currentCategory = j.category;
+  invoiceItems = [];
+  if (h > 0) invoiceItems.push({ name: `Labor — ${h} hrs @ ${money(j.rate)}/hr`, price: round2(h * j.rate), qty: 1 });
+  j.materials.forEach(m => invoiceItems.push({ name: 'Materials: ' + m.name, price: m.cost, qty: 1 }));
+  document.getElementById('catTitle').textContent = j.category;
+  document.getElementById('invTransport').value = profile.transport || 0;
+  document.getElementById('invMaint').value = profile.maint || 0;
+  document.getElementById('invCustomer').value = j.customer || '';
+  document.getElementById('invJobAddress').value = j.address || '';
+  document.getElementById('invNotes').value = j.notes || '';
+  editingId = null; editingDate = null;
+  pendingLink = { jobId: j.id };
+  toast('Invoice prefilled from ' + j.id);
+  showScreen('builder');
+}
+
+/* ---------- Example data ---------- */
+const isEx = r => r && r.isExample;
+function hasExamples() {
+  return getInvoices().some(isEx) || getQuotes().some(isEx) || getJobs().some(isEx);
+}
+function updateExampleUI() {
+  const show = hasExamples();
+  document.querySelectorAll('.ex-banner').forEach(b => b.classList.toggle('show', show));
+  const fresh = !getInvoices().length && !getQuotes().length && !getJobs().length && !localStorage.getItem('hoppsExamplesDismissed');
+  document.getElementById('firstRunCard').style.display = fresh ? 'block' : 'none';
+}
+function dismissFirstRun() { store('hoppsExamplesDismissed', true); updateExampleUI(); }
+function loadExamples() {
+  if (hasExamples()) { toast('Example data is already loaded'); return; }
+  const d = k => ymd(addDays(new Date(), k));
+  const mk = (o) => { o.isExample = true; o.total = round2(o.items.reduce((s, i) => s + i.price * i.qty, 0) + o.transport + o.maint); return o; };
+  const invoices = [
+    mk({ kind: 'invoice', id: 'EX-001', date: d(-2), category: 'Plumbing', customer: 'Dana Whitfield (example)', jobAddress: '42 Sample Rd, Fictionville', notes: 'Example note: replaced wax ring, recheck in a month.', items: [{ name: 'Toilet repair', price: 150, qty: 1 }, { name: 'Drain cleaning', price: 120, qty: 1 }], transport: 25, maint: 40, paid: false }),
+    mk({ kind: 'invoice', id: 'EX-002', date: d(-6), category: 'Electrical', customer: 'Lee Park (example)', jobAddress: '9 Demo Ave, Sampletown', notes: 'Example note: breaker panel is old, suggest upgrade.', items: [{ name: 'Ceiling fan install', price: 150, qty: 1 }, { name: 'GFCI replacement', price: 90, qty: 2 }], transport: 25, maint: 0, paid: true, jobId: 'EX-J03' }),
+    mk({ kind: 'invoice', id: 'EX-003', date: d(-12), category: 'Small Engine', customer: 'Maria Gomez (example)', jobAddress: '310 Placeholder Pl, Fictionville', notes: '', items: [{ name: 'Lawn mower spring tune-up', price: 75, qty: 1 }, { name: 'Blade sharpening', price: 25, qty: 2 }], transport: 0, maint: 15, paid: true }),
+    mk({ kind: 'invoice', id: 'EX-004', date: d(-20), category: 'Home Repairs', customer: 'Dana Whitfield (example)', jobAddress: '42 Sample Rd, Fictionville', notes: 'Example note: customer wants a quote for the deck next spring.', items: [{ name: 'Drywall patch', price: 90, qty: 2 }, { name: 'Door repair / adjust', price: 60, qty: 1 }], transport: 25, maint: 40, paid: false }),
+    mk({ kind: 'invoice', id: 'EX-005', date: d(-35), category: 'General', customer: 'Sam Okafor (example)', jobAddress: '77 Mock St, Sampletown', notes: '', items: [{ name: 'General handyman hour', price: 75, qty: 3 }, { name: 'Assembly / installation', price: 60, qty: 1 }], transport: 25, maint: 0, paid: true })
+  ];
+  const quotes = [
+    mk({ kind: 'quote', id: 'EX-Q01', date: d(-3), expiry: d(27), status: 'Sent', category: 'Electrical', customer: 'Lee Park (example)', jobAddress: '9 Demo Ave, Sampletown', notes: 'Example: wants pricing before the holidays.', items: [{ name: 'Light fixture install', price: 95, qty: 4 }, { name: 'Outlet / switch replacement', price: 85, qty: 2 }], transport: 25, maint: 0 }),
+    mk({ kind: 'quote', id: 'EX-Q02', date: d(-9), expiry: d(21), status: 'Accepted', category: 'Home Repairs', customer: 'Maria Gomez (example)', jobAddress: '310 Placeholder Pl, Fictionville', notes: '', items: [{ name: 'Window repair', price: 70, qty: 3 }, { name: 'Replace rotted sill (example custom line)', price: 180, qty: 1 }], transport: 25, maint: 40, jobId: 'EX-J02' }),
+    mk({ kind: 'quote', id: 'EX-Q03', date: d(-1), expiry: d(29), status: 'Draft', category: 'General', customer: 'Sam Okafor (example)', jobAddress: '77 Mock St, Sampletown', notes: '', items: [{ name: 'Seasonal maintenance', price: 100, qty: 1 }, { name: 'Gutter cleaning (example custom line)', price: 140, qty: 1 }], transport: 25, maint: 0 })
+  ];
+  const now = new Date();
+  const ts = (k, h) => { const s = addDays(now, k); s.setHours(9, 0, 0, 0); const e = new Date(s.getTime() + h * 3600000); return { date: ymd(s), start: s.toISOString(), end: e.toISOString(), hours: h }; };
+  const jobs = [
+    { id: 'EX-J01', isExample: true, created: d(-3), customer: 'Lee Park (example)', address: '9 Demo Ave, Sampletown', category: 'Electrical', status: 'Scheduled', scheduled: d(3), rate: 65, timeEntries: [], materials: [], notes: 'Example: bring ladder and 4 LED fixtures.', quoteIds: ['EX-Q01'], invoiceIds: [] },
+    { id: 'EX-J02', isExample: true, created: d(-9), customer: 'Maria Gomez (example)', address: '310 Placeholder Pl, Fictionville', category: 'Home Repairs', status: 'In progress', scheduled: d(-4), rate: 65, timeEntries: [ts(-4, 3), ts(-1, 2.5)], materials: [{ name: 'Pine sill board (example)', cost: 38.5 }, { name: 'Exterior caulk ×2 (example)', cost: 14.98 }], notes: 'Example: rot worse than expected on the west window.', quoteIds: ['EX-Q02'], invoiceIds: [] },
+    { id: 'EX-J03', isExample: true, created: d(-8), customer: 'Lee Park (example)', address: '9 Demo Ave, Sampletown', category: 'Electrical', status: 'Paid', scheduled: d(-6), rate: 65, timeEntries: [Object.assign(ts(-6, 2), { manual: true })], materials: [{ name: 'GFCI outlets (example)', cost: 36 }], notes: '', quoteIds: [], invoiceIds: ['EX-002'] },
+    { id: 'EX-J04', isExample: true, created: d(-1), customer: 'Sam Okafor (example)', address: '77 Mock St, Sampletown', category: 'General', status: 'Lead', scheduled: '', rate: 60, timeEntries: [], materials: [], notes: 'Example: called about gutters and fall clean-up.', quoteIds: ['EX-Q03'], invoiceIds: [] }
+  ];
+  store('hoppsInvoices', [...getInvoices(), ...invoices]);
+  store('hoppsQuotes', [...getQuotes(), ...quotes]);
+  store('hoppsJobs', [...getJobs(), ...jobs]);
+  const custs = [['Dana Whitfield (example)', '42 Sample Rd, Fictionville'], ['Lee Park (example)', '9 Demo Ave, Sampletown'], ['Maria Gomez (example)', '310 Placeholder Pl, Fictionville'], ['Sam Okafor (example)', '77 Mock St, Sampletown']];
+  const cl = getCustomers();
+  custs.forEach(([name, address]) => { if (!cl.some(c => c.name.toLowerCase() === name.toLowerCase())) cl.push({ name, address, isExample: true }); });
+  cl.sort((a, b) => a.name.localeCompare(b.name)); store('hoppsCustomers', cl);
+  // Journal / work days (only on days that have nothing real logged)
+  const log = getLog();
+  [[-1, true, false, '', 'Example journal: long shift, quick stop at Gomez job after.'], [-4, true, true, 'Gomez windows (example)', ''], [-5, true, false, '', ''],
+   [-8, true, false, '', 'Example journal: rain all day, caught up on paperwork.'], [-13, false, true, 'Garage shelving (example)', 'Example journal: finished early.']]
+    .forEach(([k, work, side, job, notes]) => { const key = d(k); if (!log[key]) log[key] = { isExample: true, work, side, job, notes }; });
+  store('hoppsLog', log);
+  invoices.forEach(logInvoice);
+  store('hoppsExamplesDismissed', true);
+  toast('Example data loaded');
+  showScreen('menu');
+}
+function removeExamples() {
+  if (!hasExamples() && !getCustomers().some(isEx)) { toast('No example data to remove'); return; }
+  if (!confirm('Remove all EXAMPLE records? Your real data is not touched.')) return;
+  const notEx = r => !r.isExample;
+  const exId = id => /^EX-/.test(id || '');
+  store('hoppsInvoices', getInvoices().filter(notEx).map(i => { if (exId(i.quoteId)) delete i.quoteId; if (exId(i.jobId)) delete i.jobId; return i; }));
+  store('hoppsQuotes', getQuotes().filter(notEx).map(q => { if (exId(q.jobId)) delete q.jobId; if (exId(q.invoiceId)) delete q.invoiceId; return q; }));
+  store('hoppsJobs', getJobs().filter(notEx).map(j => { j.quoteIds = j.quoteIds.filter(x => !exId(x)); j.invoiceIds = j.invoiceIds.filter(x => !exId(x)); return j; }));
+  store('hoppsCustomers', getCustomers().filter(notEx));
+  const log = getLog();
+  Object.keys(log).forEach(k => {
+    const e = log[k];
+    const inv = e.invoices || {};
+    const exLabels = Object.keys(inv).filter(exId).map(id => inv[id]);
+    Object.keys(inv).filter(exId).forEach(id => delete inv[id]);
+    const realInv = Object.entries(inv);
+    if (e.isExample) {
+      if (!realInv.length) delete log[k];
+      else log[k] = { side: true, invoices: inv, job: realInv[0][1] };
+    } else if (exLabels.includes(e.job)) {
+      e.job = realInv.length ? realInv[0][1] : '';
+      if (!realInv.length && !e.work && !(e.notes || '').trim()) e.side = false;
+      if (!hasEntry(e)) delete log[k];
+    }
+  });
+  store('hoppsLog', log);
+  toast('Example data removed');
+  showScreen('menu');
 }
 
 // PWA

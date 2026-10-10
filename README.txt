@@ -19,3 +19,9 @@ Edit the profile first to put your real info in.
 - Customers address book, editable catalogue, earnings dashboard.
 - Backup: download a JSON file and restore it on a new phone.
 - Auto-locks after 5 minutes in the background. All data stays on the phone (localStorage).
+
+## Version 3 features
+- Quotes / estimates (Q-0001...) with status and "Valid until"; Estimate PNG; convert to invoice or create a job in one tap.
+- Jobs: status (Lead to Paid), scheduled date, start/stop timer, manual hours, materials, linked quotes and invoices; create an invoice from a job.
+- Calendar shows scheduled jobs and days you logged job time.
+- Example data: load from the first-run card or Backup & Examples; marked EXAMPLE and removable without touching real data.
