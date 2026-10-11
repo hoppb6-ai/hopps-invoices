@@ -2234,7 +2234,7 @@ const meterKey = it => { const f = it && it.fields.find(x => x.type === 'meter')
 const isMeter = it => !!(it && (it.meter || it.fields.some(f => f.type === 'meter')));
 function cleanMeter(v, dec) {
   v = String(v).replace(dec ? /[^0-9.]/g : /[^0-9]/g, '');
-  if (dec) { const k = v.indexOf('.'); if (k >= 0) v = v.slice(0, k + 1) + v.slice(k + 1).replace(/\./g, '').slice(0, 1); }
+  if (dec) { const k = v.indexOf('.'); if (k >= 0) v = v.slice(0, k + 1) + v.slice(k + 1).replace(/\./g, '').slice(0, 2); }
   return v;
 }
 function meterInput(el, dec) { const v = cleanMeter(el.value, dec); if (v !== el.value) el.value = v; }
@@ -2354,7 +2354,7 @@ function clEdRender() {
       ${it.fields.map((f, j) => `<div class="cl-ed-field">
         <input value="${esc(f.label)}" placeholder="Value name" onchange="clDraft[${i}].fields[${j}].label=this.value">
         <input value="${esc(f.unit || '')}" placeholder="Unit" onchange="clDraft[${i}].fields[${j}].unit=this.value">
-        <select onchange="clFieldType(${i},${j},this.value)"><option value="number"${f.type === 'number' || !f.type ? ' selected' : ''}>Number</option><option value="meter"${f.type === 'meter' && !f.dec ? ' selected' : ''}>Meter (digits)</option><option value="meterdec"${f.type === 'meter' && f.dec ? ' selected' : ''}>Meter (1 decimal)</option><option value="time"${f.type === 'time' ? ' selected' : ''}>Time</option></select>
+        <select onchange="clFieldType(${i},${j},this.value)"><option value="number"${f.type === 'number' || !f.type ? ' selected' : ''}>Number</option><option value="meter"${f.type === 'meter' && !f.dec ? ' selected' : ''}>Meter (digits)</option><option value="meterdec"${f.type === 'meter' && f.dec ? ' selected' : ''}>Meter (decimal)</option><option value="time"${f.type === 'time' ? ' selected' : ''}>Time</option></select>
         <input type="number" step="any" value="${f.min != null ? f.min : ''}" placeholder="Min" onchange="clDraft[${i}].fields[${j}].min=this.value===''?undefined:Number(this.value)">
         <input type="number" step="any" value="${f.max != null ? f.max : ''}" placeholder="Max" onchange="clDraft[${i}].fields[${j}].max=this.value===''?undefined:Number(this.value)">
         <button class="small danger" onclick="clDraft[${i}].fields.splice(${j},1);clEdRender()" aria-label="Remove value field">✕</button></div>`).join('')}

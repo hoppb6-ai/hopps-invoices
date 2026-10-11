@@ -54,7 +54,7 @@ v4.3 — Data safety
 v4.4
 - App renamed "Hopp" (title, home-screen name, PIN screen, header). Invoices still show the business name from the profile.
 - New ordered NWH daily checklist (numbered): Fill Evap Tank, Collect water samples, 7 meters (gas, Boiler 2 gas, day bin cycle, Boiler 2/Boiler 1/Scrubber hour meters, water), Boiler 1 and 2 system checks, Water sample check (optional sulfite/pH/conductivity for each boiler). Blowdown item removed.
-- Meter fields take digits only (hour meters allow one decimal). Entering a value checks the item.
+- Meter fields take digits only (hour meters allow up to 2 decimals). Entering a value checks the item.
 - Each meter shows the previous reading (with its date), today's reading and daily usage (with the number of days when there's a gap). Negative usage is shown in red.
 - Meter history (NWH → Meters): readings, usage and 7/30-day average per day.
 - Upgrade: the old default items are replaced. Values already recorded under them are kept, shown under "Earlier checklist items" on that day and in Readings history. Custom items are kept.
