@@ -2751,12 +2751,12 @@ function fillSettings() {
 function saveSettings() {
   const v = id => document.getElementById(id).value;
   const num = (id, d) => { const n = parseFloat(v(id)); return isNaN(n) ? d : n; };
-  store('hoppsSettings', {
+  store('hoppsSettings', Object.assign(load('hoppsSettings', {}), {   // keep the checklist template and other settings not on this form
     employer: v('sEmployer').trim() || DEFAULT_SETTINGS.employer, abbr: v('sAbbr').trim().slice(0, 6) || DEFAULT_SETTINGS.abbr, title: v('sTitle').trim() || DEFAULT_SETTINGS.title,
     wage: num('sWage', 0), ptoHours: num('sPto', 8), otDaily: num('sOtDaily', 8), otWeekly: num('sOtWeekly', 40),
     payLen: Number(v('sPayLen')) || 14, payStart: v('sPayStart') || DEFAULT_SETTINGS.payStart, weekStart: Number(v('sWeekStart')) || 0,
     shifts: { Day: [v('sDayS'), v('sDayE')], Swing: [v('sSwingS'), v('sSwingE')], Night: [v('sNightS'), v('sNightE')] }
-  });
+  }));
   updateNwhTab();
   toast('Settings saved');
 }
